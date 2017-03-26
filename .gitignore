@@ -1,0 +1,49 @@
+# Batch helper files
+*LSFJOB_*
+*run_Config_*.sh
+
+# Result directories
+savedResults
+Plotting/archivePlots
+
+
+
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.pyc
+
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Outputs #
+###########
+*.root
+*.pickle
+*.pdf
+*.png
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
