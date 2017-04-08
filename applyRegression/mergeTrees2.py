@@ -5,9 +5,9 @@ response   = array( 'f', [ 0. ] )
 resolution = array( 'f', [ 0. ] )
 e80xECALTRK = array( 'f', [ 0. ] )
 
-outputFile = ROOT.TFile.Open("/eos/user/r/rcoelhol/80X_NTuples/" + sys.argv[1] + "_withRegression_merged.root", "RECREATE")
-inputFile1 = ROOT.TFile.Open("/eos/user/r/rcoelhol/80X_NTuples/" + sys.argv[1] + "_withRegression.root")
-inputFile2 = ROOT.TFile.Open(sys.argv[1]+"_application.root")
+outputFile = ROOT.TFile.Open(sys.argv[1] + "_withRegression_merged.root", "RECREATE")
+inputFile1 = ROOT.TFile.Open(sys.argv[1] + "_withRegression.root")
+inputFile2 = ROOT.TFile.Open(sys.argv[1] + "_withRegression_trkRegression.root")
 
 inputTree1 = inputFile1.Get('een_analyzer/ElectronTree')
 inputTree2 = inputFile2.Get('een_analyzer/correction')
@@ -27,10 +27,10 @@ for ievent in xrange(inputTree1.GetEntries()):
     inputTree1.GetEntry(ievent)
     inputTree2.GetEntry(ievent)
 
-    response[0]   = inputTree2.response
-    resolution[0] = inputTree2.resolution
+    response[0]   = inputTree2.response2
+    resolution[0] = inputTree2.resolution2
 
-    e80xECALTRK[0] = inputTree2.response*((inputTree1.scRawEnergy+inputTree1.scPreshowerEnergy)*inputTree1.response*inputTree1.trkMomentum*inputTree1.trkMomentum*inputTree1.trkMomentumRelError*inputTree1.trkMomentumRelError+inputTree1.trkMomentum*(inputTree1.scRawEnergy+inputTree1.scPreshowerEnergy)*(inputTree1.scRawEnergy+inputTree1.scPreshowerEnergy)*inputTree1.resolution*inputTree1.resolution)/((inputTree1.trkMomentum*inputTree1.trkMomentum*inputTree1.trkMomentumRelError*inputTree1.trkMomentumRelError+(inputTree1.scRawEnergy+inputTree1.scPreshowerEnergy)*(inputTree1.scRawEnergy+inputTree1.scPreshowerEnergy)*inputTree1.resolution*inputTree1.resolution))
+    e80xECALTRK[0] = inputTree2.response2*((inputTree1.rawEnergy+inputTree1.preshowerEnergy)*inputTree1.response*inputTree1.trkMomentum*inputTree1.trkMomentum*inputTree1.trkMomentumRelError*inputTree1.trkMomentumRelError+inputTree1.trkMomentum*(inputTree1.rawEnergy+inputTree1.preshowerEnergy)*(inputTree1.rawEnergy+inputTree1.preshowerEnergy)*inputTree1.resolution*inputTree1.resolution)/((inputTree1.trkMomentum*inputTree1.trkMomentum*inputTree1.trkMomentumRelError*inputTree1.trkMomentumRelError+(inputTree1.rawEnergy+inputTree1.preshowerEnergy)*(inputTree1.rawEnergy+inputTree1.preshowerEnergy)*inputTree1.resolution*inputTree1.resolution))
 
     outputTree.Fill()
     nevent = nevent + 1

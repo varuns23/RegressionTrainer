@@ -6,8 +6,8 @@ resolution   = array( 'f', [ 0. ] )
 e80xECALonly = array( 'f', [ 0. ] )
 eOverP = array( 'f', [ 0. ] )
 
-outputFile = ROOT.TFile.Open("/eos/user/r/rcoelhol/80X_NTuples/"+sys.argv[1]+"_withRegression.root","RECREATE")
-inputFile1 = ROOT.TFile.Open("/eos/user/r/rcoelhol/80X_NTuples/"+sys.argv[1]+".root")
+outputFile = ROOT.TFile.Open(sys.argv[1]+"_withRegression.root","RECREATE")
+inputFile1 = ROOT.TFile.Open(sys.argv[1]+".root")
 inputFile2 = ROOT.TFile.Open(sys.argv[1]+"_application.root")
 
 inputTree1 = inputFile1.Get('een_analyzer/PhotonTree')

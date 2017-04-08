@@ -174,9 +174,9 @@ RooDataSet* LoadDataset(
     TCut eventcut  = (TCut)eventcut_string;
     TCut regioncut;
     if (dobarrel)
-        regioncut = "scIsEB";
+        regioncut = "isEB";
     else
-        regioncut = "!scIsEB";
+        regioncut = "!isEB";
 
     RooRealVar weightvar( "weightvar", "" ,1.);
     weightvar.SetTitle( eventcut * regioncut );

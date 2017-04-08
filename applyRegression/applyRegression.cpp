@@ -8,6 +8,7 @@
 // Needed for randomly assigned weight
 #include "TRandom.h"
 #include "TF1.h"
+#include "TMath.h"
 
 #include <boost/program_options.hpp>
 #include <boost/tokenizer.hpp>
@@ -19,37 +20,60 @@
 #include <cstring>
 #include <iostream>
 #include <cstdlib>
+#include <array>
 
 using namespace std;
 using namespace boost;
 using namespace boost::program_options;
 using namespace boost::filesystem;
 
-#define debug false
+#define debug true
 #define testing false
-
-#define saveTRKvarse true
-
-
-bool replace(std::string& str, const std::string& from, const std::string& to) {
-  size_t start_pos = str.find(from);
-  if(start_pos == std::string::npos)
-    return false;
-  str.replace(start_pos, from.length(), to);
-  return true;
-}
-
-//#######################################
-// Main
-//#######################################
 
 int main(int argc, char** argv) {
   
-  double responseMin = -1.0 ;
-  double responseMax = 3.0 ;
+
+  string configPrefix;
+  string trainingPrefix;
+  string testingFileName;
+  string outputFileName;
+  string supressVariable;
+  
+
+  options_description desc("Allowed options");
+  desc.add_options()
+    ("help,h", "print usage message")
+    ("config,c", value<string>(&configPrefix), "Configuration prefix")
+    ("prefix,p", value<string>(&trainingPrefix), "Training prefix")
+    ("testing,t", value<string>(&testingFileName), "Testing tree")
+    ("output,o", value<string>(&outputFileName), "Output friend tree")
+    ("gsf,g", "Do GSF track regression")
+    ("zero,z", value<string>(&supressVariable), "Force variable to zero (for sensitivity studies)")
+    ;
+
+  variables_map vm;
+  store(parse_command_line(argc, argv, desc), vm);
+  notify(vm);
+  
+  if (vm.count("help")) {
+    cout << desc << "\n";
+    return 1;
+  }
+
+  bool doGSF = false;
+  if (vm.count("gsf")) {
+    doGSF = true;
+  }
+
+  double responseMin = 0.5 ;
+  double responseMax = 2.1 ;
   double resolutionMin = 0.0002 ;
   double resolutionMax = 0.5 ;
 
+  if (!doGSF) {
+    responseMin = 0.8;
+    responseMax = 1.5;
+  }
 
   double responseScale = 0.5*( responseMax - responseMin );
   double responseOffset = responseMin + 0.5*( responseMax - responseMin );
@@ -57,404 +81,318 @@ int main(int argc, char** argv) {
   double resolutionScale = 0.5*( resolutionMax - resolutionMin );
   double resolutionOffset = resolutionMin + 0.5*( resolutionMax - resolutionMin );
 
+  GBRForestD* forest_EB_ecal_single_lowpt_scale;
+  GBRForestD* forest_EB_ecal_single_medpt_scale;
+  GBRForestD* forest_EB_ecal_single_highpt_scale;
+  GBRForestD* forest_EB_ecal_mult_lowpt_scale;
+  GBRForestD* forest_EB_ecal_mult_medpt_scale;
+  GBRForestD* forest_EB_ecal_mult_highpt_scale;
+  GBRForestD* forest_EB_ecal_sat_scale;
 
-  string parameterFile;
-  string testingFileName;
-  string outputFileName;
-  string trainingEB;
-  string trainingEE;
-  string trainingEBhighpt;
-  string trainingEEhighpt;
-  string supressVariable;
-  
+  GBRForestD* forest_EE_ecal_single_lowpt_scale;
+  GBRForestD* forest_EE_ecal_single_medpt_scale;
+  GBRForestD* forest_EE_ecal_single_highpt_scale;
+  GBRForestD* forest_EE_ecal_mult_lowpt_scale;
+  GBRForestD* forest_EE_ecal_mult_medpt_scale;
+  GBRForestD* forest_EE_ecal_mult_highpt_scale;
+  GBRForestD* forest_EE_ecal_sat_scale;
 
-  float limhighpt ;
-  options_description desc("Allowed options");
-  desc.add_options()
-    ("help,h", "print usage message")
-    ("parameter,p", value<string>(&parameterFile), "Parameter file")
-    ("barrel,b", value<string>(&trainingEB), "EB training")
-    ("endcap,e", value<string>(&trainingEE), "EE training")
-    ("barrelhighpt,c", value<string>(&trainingEBhighpt), "EB training highpt")
-    ("endcaphighpt,f", value<string>(&trainingEEhighpt), "EE training highpt")
-    ("testing,t", value<string>(&testingFileName), "Testing tree")
-    ("output,o", value<string>(&outputFileName), "Output friend tree")
-    ("zero,z", value<string>(&supressVariable), "Force variable to zero (for sensitivity studies)")
-    ("limhighpt,l", value<float>(&limhighpt), "Boundary for high pT")
-    ;
+  GBRForestD* forest_EB_ecal_single_lowpt_resolution;
+  GBRForestD* forest_EB_ecal_single_medpt_resolution;
+  GBRForestD* forest_EB_ecal_single_highpt_resolution;
+  GBRForestD* forest_EB_ecal_mult_lowpt_resolution;
+  GBRForestD* forest_EB_ecal_mult_medpt_resolution;
+  GBRForestD* forest_EB_ecal_mult_highpt_resolution;
+  GBRForestD* forest_EB_ecal_sat_resolution;
 
-  variables_map vm;
-  store(parse_command_line(argc, argv, desc), vm);
-  notify(vm);
-  
-  if (vm.count("help") || !vm.count("parameter")) {
-    cout << desc << "\n";
+  GBRForestD* forest_EE_ecal_single_lowpt_resolution;
+  GBRForestD* forest_EE_ecal_single_medpt_resolution;
+  GBRForestD* forest_EE_ecal_single_highpt_resolution;
+  GBRForestD* forest_EE_ecal_mult_lowpt_resolution;
+  GBRForestD* forest_EE_ecal_mult_medpt_resolution;
+  GBRForestD* forest_EE_ecal_mult_highpt_resolution;
+  GBRForestD* forest_EE_ecal_sat_resolution;
+
+  GBRForestD* forest_EB_trk_lowpt_scale;
+  GBRForestD* forest_EB_trk_highpt_scale;
+  GBRForestD* forest_EE_trk_lowpt_scale;
+  GBRForestD* forest_EE_trk_highpt_scale;
+
+  GBRForestD* forest_EB_trk_lowpt_resolution;
+  GBRForestD* forest_EB_trk_highpt_resolution;
+  GBRForestD* forest_EE_trk_lowpt_resolution;
+  GBRForestD* forest_EE_trk_highpt_resolution;
+
+  std::vector<TFile*> file_;
+
+  if (!doGSF) {
+
+    file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_single_lowpt_results.root", trainingPrefix.c_str())));  
+    forest_EB_ecal_single_lowpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
+    forest_EB_ecal_single_lowpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_single_medpt_results.root", trainingPrefix.c_str())));  
+    forest_EB_ecal_single_medpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
+    forest_EB_ecal_single_medpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_single_highpt_results.root", trainingPrefix.c_str())));  
+    forest_EB_ecal_single_highpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
+    forest_EB_ecal_single_highpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_mult_lowpt_results.root", trainingPrefix.c_str())));  
+    forest_EB_ecal_mult_lowpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
+    forest_EB_ecal_mult_lowpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_mult_medpt_results.save.root", trainingPrefix.c_str())));  
+    forest_EB_ecal_mult_medpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
+    forest_EB_ecal_mult_medpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_mult_highpt_results.root", trainingPrefix.c_str())));  
+    forest_EB_ecal_mult_highpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
+    forest_EB_ecal_mult_highpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_sat_results.root", trainingPrefix.c_str())));  
+    forest_EB_ecal_sat_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
+    forest_EB_ecal_sat_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
+
+    file_.push_back(TFile::Open(TString::Format("%s_EE_ecal_single_lowpt_results.root", trainingPrefix.c_str())));  
+    forest_EE_ecal_single_lowpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
+    forest_EE_ecal_single_lowpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EE_ecal_single_medpt_results.root", trainingPrefix.c_str())));  
+    forest_EE_ecal_single_medpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
+    forest_EE_ecal_single_medpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EE_ecal_single_highpt_results.root", trainingPrefix.c_str())));  
+    forest_EE_ecal_single_highpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
+    forest_EE_ecal_single_highpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EE_ecal_mult_lowpt_results.root", trainingPrefix.c_str())));  
+    forest_EE_ecal_mult_lowpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
+    forest_EE_ecal_mult_lowpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EE_ecal_mult_medpt_results.root", trainingPrefix.c_str())));  
+    forest_EE_ecal_mult_medpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
+    forest_EE_ecal_mult_medpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EE_ecal_mult_highpt_results.root", trainingPrefix.c_str())));  
+    forest_EE_ecal_mult_highpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
+    forest_EE_ecal_mult_highpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EE_ecal_sat_results.root", trainingPrefix.c_str())));  
+    forest_EE_ecal_sat_scale = (GBRForestD*) file_.back()->Get("EECorrection");
+    forest_EE_ecal_sat_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
+
+  } else {
+
+    file_.push_back(TFile::Open(TString::Format("%s_EB_trk_lowpt_results.root", trainingPrefix.c_str())));  
+    forest_EB_trk_lowpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
+    forest_EB_trk_lowpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EB_trk_highpt_results.root", trainingPrefix.c_str())));  
+    forest_EB_trk_highpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
+    forest_EB_trk_highpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EE_trk_lowpt_results.root", trainingPrefix.c_str())));  
+    forest_EE_trk_lowpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
+    forest_EE_trk_lowpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
+    file_.push_back(TFile::Open(TString::Format("%s_EE_trk_highpt_results.root", trainingPrefix.c_str())));  
+    forest_EE_trk_highpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
+    forest_EE_trk_highpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
+
+  }  
+
+  bool isElectron = contains(trainingPrefix, "electron");
+  bool isPhoton = contains(trainingPrefix, "photon");
+  if (isElectron && isPhoton) {
+    cout << "Sorry, I cannot decide if this parameter file is for electrons of photons" << endl;
     return 1;
   }
-
-  if (!vm.count("limhightpt")) limhighpt = 300.;
-
-  if (!vm.count("testing")) {
-    testingFileName = getenv("CMSSW_BASE");
-    testingFileName = testingFileName + "/src/NTuples/Ntup_Jul22_fullpt_testing.root";
+  if (isElectron && debug) {
+    cout << "Running electron regression" << endl;
+  }
+  if (isPhoton && debug) {
+    cout << "Running photon regression" << endl;
   }
 
-  if (!vm.count("output")) {
-    outputFileName = parameterFile;
-    replace(outputFileName, "python/", "");
-    replace(outputFileName, "_EB", "");
-    replace(outputFileName, "_EE", "");
-    replace(outputFileName, ".config", "_application.root");
-  }
+  ParReader reader_EB_ecal_single_lowpt; reader_EB_ecal_single_lowpt.read(TString::Format("%s_EB_ecal_single_lowpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EB_ecal_single_medpt; reader_EB_ecal_single_medpt.read(TString::Format("%s_EB_ecal_single_medpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EB_ecal_single_highpt; reader_EB_ecal_single_highpt.read(TString::Format("%s_EB_ecal_single_highpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EB_ecal_mult_lowpt; reader_EB_ecal_mult_lowpt.read(TString::Format("%s_EB_ecal_mult_lowpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EB_ecal_mult_medpt; reader_EB_ecal_mult_medpt.read(TString::Format("%s_EB_ecal_mult_medpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EB_ecal_mult_highpt; reader_EB_ecal_mult_highpt.read(TString::Format("%s_EB_ecal_mult_highpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EB_ecal_sat; reader_EB_ecal_sat.read(TString::Format("%s_EB_ecal_sat.config", configPrefix.c_str()).Data());
+
+  ParReader reader_EE_ecal_single_lowpt; reader_EE_ecal_single_lowpt.read(TString::Format("%s_EE_ecal_single_lowpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EE_ecal_single_medpt; reader_EE_ecal_single_medpt.read(TString::Format("%s_EE_ecal_single_medpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EE_ecal_single_highpt; reader_EE_ecal_single_highpt.read(TString::Format("%s_EE_ecal_single_highpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EE_ecal_mult_lowpt; reader_EE_ecal_mult_lowpt.read(TString::Format("%s_EE_ecal_mult_lowpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EE_ecal_mult_medpt; reader_EE_ecal_mult_medpt.read(TString::Format("%s_EE_ecal_mult_medpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EE_ecal_mult_highpt; reader_EE_ecal_mult_highpt.read(TString::Format("%s_EE_ecal_mult_highpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EE_ecal_sat; reader_EE_ecal_sat.read(TString::Format("%s_EE_ecal_sat.config", configPrefix.c_str()).Data());
+
+  ParReader reader_EB_trk_lowpt; reader_EB_trk_lowpt.read(TString::Format("%s_EB_trk_lowpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EB_trk_highpt; reader_EB_trk_highpt.read(TString::Format("%s_EB_trk_highpt.config", configPrefix.c_str()).Data());
+
+  ParReader reader_EE_trk_lowpt; reader_EE_trk_lowpt.read(TString::Format("%s_EE_trk_lowpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EE_trk_highpt; reader_EE_trk_highpt.read(TString::Format("%s_EE_trk_highpt.config", configPrefix.c_str()).Data());
+
+  TFile* testingFile = TFile::Open(testingFileName.c_str());
+  TTree* testingTree = isElectron ? (TTree*) testingFile->Get("een_analyzer/ElectronTree") : (TTree*) testingFile->Get("een_analyzer/PhotonTree");
   
-  bool doEB = vm.count("barrel");
-  bool doEE = vm.count("endcap");
-  bool doEBhighpt = vm.count("barrelhighpt");
-  bool doEEhighpt = vm.count("endcaphighpt");
-
-  if (!doEB) {
-    trainingEB = parameterFile;
-    replace(trainingEB, "python/", "");
-    replace(trainingEB, "_EE", "_EB");
-    replace(trainingEB, ".config", "_results.root");
-    doEB = true;
-  }
-
-  if (!doEE) {
-    trainingEE = parameterFile;
-    replace(trainingEE, "python/", "");
-    replace(trainingEE, "_EB", "_EE");
-    replace(trainingEE, ".config", "_results.root");
-    doEE = true;
-  }
-
-  if (!exists(trainingEB)) doEB = false;
-  if (!exists(trainingEE)) doEE = false;
+  TTreeFormula genE("genEnergy", "genEnergy", testingTree);
+  TTreeFormula genPt("genPt", "genPt", testingTree);
+  TTreeFormula isEB("isEB", "isEB", testingTree);
+  TTreeFormula numberOfClusters("numberOfClusters", "numberOfClusters", testingTree);
+  TTreeFormula nrSaturatedCrysIn5x5("nrSaturatedCrysIn5x5", "nrSaturatedCrysIn5x5", testingTree);
+  TTreeFormula eOverPuncorr("eOverPuncorr", "eOverPuncorr", testingTree);
+  TTreeFormula rawE("rawEnergy+preshowerEnergy", "rawEnergy+preshowerEnergy", testingTree);
+  TTreeFormula rawComb("rawComb", "( genEnergy * (trkMomentum*trkMomentum*trkMomentumRelError*trkMomentumRelError + (rawEnergy+preshowerEnergy)*(rawEnergy+preshowerEnergy)*resolution*resolution) / ( (rawEnergy+preshowerEnergy)*response*trkMomentum*trkMomentum*trkMomentumRelError*trkMomentumRelError + trkMomentum*(rawEnergy+preshowerEnergy)*(rawEnergy+preshowerEnergy)*resolution*resolution ))", testingTree);
   
-  if (doEB || doEE) { 
+  char_separator<char> sep(":");
+  std::vector<TTreeFormula*> inputforms_EB_ecal_single_lowpt;
+  { tokenizer<char_separator<char>> tokens(reader_EB_ecal_single_lowpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_single_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EB_ecal_single_medpt;
+  { tokenizer<char_separator<char>> tokens(reader_EB_ecal_single_medpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_single_medpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EB_ecal_single_highpt;
+  { tokenizer<char_separator<char>> tokens(reader_EB_ecal_single_highpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_single_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EB_ecal_mult_lowpt;
+  { tokenizer<char_separator<char>> tokens(reader_EB_ecal_mult_lowpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_mult_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EB_ecal_mult_medpt;
+  { tokenizer<char_separator<char>> tokens(reader_EB_ecal_mult_medpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_mult_medpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EB_ecal_mult_highpt;
+  { tokenizer<char_separator<char>> tokens(reader_EB_ecal_mult_highpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_mult_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EB_ecal_sat;
+  { tokenizer<char_separator<char>> tokens(reader_EB_ecal_sat.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_sat.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EE_ecal_single_lowpt;
+  { tokenizer<char_separator<char>> tokens(reader_EE_ecal_single_lowpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_single_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EE_ecal_single_medpt;
+  { tokenizer<char_separator<char>> tokens(reader_EE_ecal_single_medpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_single_medpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EE_ecal_single_highpt;
+  { tokenizer<char_separator<char>> tokens(reader_EE_ecal_single_highpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_single_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EE_ecal_mult_lowpt;
+  { tokenizer<char_separator<char>> tokens(reader_EE_ecal_mult_lowpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_mult_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EE_ecal_mult_medpt;
+  { tokenizer<char_separator<char>> tokens(reader_EE_ecal_mult_medpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_mult_medpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EE_ecal_mult_highpt;
+  { tokenizer<char_separator<char>> tokens(reader_EE_ecal_mult_highpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_mult_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EE_ecal_sat;
+  { tokenizer<char_separator<char>> tokens(reader_EE_ecal_sat.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_sat.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
 
-    GBRForestD* forestEBresponse;
-    GBRForestD* forestEBresolution;
-    GBRForestD* forestEEresponse;
-    GBRForestD* forestEEresolution;
+  std::vector<TTreeFormula*> inputforms_EB_trk_lowpt;
+  { tokenizer<char_separator<char>> tokens(reader_EB_trk_lowpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_trk_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EB_trk_highpt;
+  { tokenizer<char_separator<char>> tokens(reader_EB_trk_highpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_trk_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EE_trk_lowpt;
+  { tokenizer<char_separator<char>> tokens(reader_EE_trk_lowpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_trk_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  std::vector<TTreeFormula*> inputforms_EE_trk_highpt;
+  { tokenizer<char_separator<char>> tokens(reader_EE_trk_highpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_trk_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
 
-    GBRForestD* forestEBresponsehighpt;
-    GBRForestD* forestEBresolutionhighpt;
-    GBRForestD* forestEEresponsehighpt;
-    GBRForestD* forestEEresolutionhighpt;
+  std::vector<float> vals;
+  Float_t response = 0.;
+  Float_t resolution = 0.;
+  Float_t eOverP = 0.;
 
-    TFile* fileEB;
-    TFile* fileEE;
+  //initialize new friend tree
+  TFile* outputFile = TFile::Open(outputFileName.c_str(), "RECREATE");
+  outputFile->mkdir("een_analyzer");
+  outputFile->cd("een_analyzer");
 
-    TFile* fileEBhighpt;
-    TFile* fileEEhighpt;
-    
-    if (doEB) {
-      fileEB = TFile::Open(trainingEB.c_str());
-      forestEBresponse = (GBRForestD*) fileEB->Get("EBCorrection");
-      forestEBresolution =  (GBRForestD*) fileEB->Get("EBUncertainty");
-      if (doEBhighpt) {
-	fileEBhighpt = TFile::Open(trainingEBhighpt.c_str());
-	forestEBresponsehighpt = (GBRForestD*) fileEBhighpt->Get("EBCorrection");
-	forestEBresolutionhighpt =  (GBRForestD*) fileEBhighpt->Get("EBUncertainty");
-      } else {
-	forestEBresponsehighpt = forestEBresponse;
-	forestEBresolutionhighpt = forestEBresolution;
-      }
-      if (forestEBresponse && forestEBresolution) {
-	cout << "Got EB forests" << endl;
-      } else
-	return 1;
-    }
-
-    if (doEE) {
-      fileEE = TFile::Open(trainingEE.c_str());
-      forestEEresponse =  (GBRForestD*) fileEE->Get("EECorrection");
-      forestEEresolution =  (GBRForestD*) fileEE->Get("EEUncertainty");
-      if (doEEhighpt) {
-	fileEEhighpt = TFile::Open(trainingEEhighpt.c_str());
-	forestEEresponsehighpt = (GBRForestD*) fileEEhighpt->Get("EECorrection");
-	forestEEresolutionhighpt =  (GBRForestD*) fileEEhighpt->Get("EEUncertainty");
-      } else {
-	forestEEresponsehighpt = forestEEresponse;
-	forestEEresolutionhighpt = forestEEresolution;
-      }
-      if (forestEEresponse && forestEEresolution) {
-	cout << "Got EE forests" << endl;
-      } else
-	return 1;
-    }
-
-    bool isElectron = contains(parameterFile, "electron");
-    bool isPhoton = contains(parameterFile, "photon");
-    if (isElectron && isPhoton) {
-      cout << "Sorry, I cannot decide if this parameter file is for electrons of photons" << endl;
-      return 1;
-    }
-    
-    ParReader m_reader; m_reader.read(parameterFile);
-    TFile* testingFile = TFile::Open(testingFileName.c_str());
-    TTree* testingTree = isElectron ? (TTree*) testingFile->Get("een_analyzer/ElectronTree") : (TTree*) testingFile->Get("een_analyzer/PhotonTree");
-
-    TTreeFormula genE("genEnergy", "genEnergy", testingTree);
-    TTreeFormula generatorPt("genPt", "genPt", testingTree);
-    TTreeFormula rawE("scRawEnergy+scPreshowerEnergy", "scRawEnergy+scPreshowerEnergy", testingTree);
-    
-    char_separator<char> sep(":");
-    tokenizer<char_separator<char>> tokensEB(m_reader.m_regParams[0].variablesEB, sep);
-    tokenizer<char_separator<char>> tokensEE(m_reader.m_regParams[0].variablesEE, sep);
-    std::vector<TTreeFormula*> inputformsEB;
-    std::vector<TTreeFormula*> inputformsEE;
-    cout << "EB variables" << endl;
-    for (const auto& it : tokensEB) {      
-      inputformsEB.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree));
-      cout << "  " << it.c_str() <<endl;
-    }
-    cout << "EE variables" << endl;
-    for (const auto& it : tokensEE) {
-      inputformsEE.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree));
-      cout << "  " << it.c_str() <<endl;
-    }
-
-
-    string EBcondition = contains(m_reader.m_regParams[0].cutEB, "scIsEB") ? m_reader.m_regParams[0].cutEB : "scIsEB";
-    string EEcondition = contains(m_reader.m_regParams[0].cutEE, "scIsEB") ? m_reader.m_regParams[0].cutEE : "!scIsEB";
-    cout << "I will use for EB the definition:  "  << EBcondition.c_str() << endl;
-    cout << "I will use for EE the definition:  "  << EEcondition.c_str() << endl;
-    TTreeFormula formIsEB(EBcondition.c_str(), EBcondition.c_str(), testingTree);
-    TTreeFormula formIsEE(EEcondition.c_str(), EEcondition.c_str(), testingTree);
-    
-    int nvarsEB = distance(tokensEB.begin(), tokensEB.end());
-    int nvarsEE = distance(tokensEE.begin(), tokensEE.end());
-
-    Float_t response = 0.;
-    Float_t resolution = 0.;
-    Float_t *valsEB = new Float_t[nvarsEB];
-    Float_t *valsEE = new Float_t[nvarsEE];
-
-    //initialize new friend tree
-    TFile* outputFile = TFile::Open(outputFileName.c_str(), "RECREATE");
-    outputFile->mkdir("een_analyzer");
-    outputFile->cd("een_analyzer");
-
-    TTree *friendtree = new TTree("correction", "correction");
+  TTree *friendtree = new TTree("correction", "correction");
+  if (!doGSF) {
     friendtree->Branch("response", &response, "response/F");
     friendtree->Branch("resolution", &resolution, "resolution/F");
+    friendtree->Branch("eOverP", &eOverP, "eOverP/F");
+  } else {
+    friendtree->Branch("response2", &response, "response2/F");
+    friendtree->Branch("resolution2", &resolution, "resolution2/F");
+  }
+  for (Long64_t iev=0; iev<testingTree->GetEntries(); ++iev) {
 
+    response = 0.;
+    resolution = 0.;
+    if (iev%100000==0) printf("%i\n",int(iev));
+    testingTree->LoadTree(iev);
 
-    // ------------------------
-    // All the TRK vars, so merging is not necessary
+    if (!doGSF) {
+      bool EB_ = isEB.EvalInstance();
+      bool EE_ = !EB_;
+      bool low_ = genPt.EvalInstance() < 300.;
+      bool med_ = genPt.EvalInstance() >= 300. && genPt.EvalInstance() < 1000.;
+      bool high_ = genPt.EvalInstance() >= 1000.;
+      bool single_ = numberOfClusters.EvalInstance() == 1;
+      bool mult_ = !single_;
+      bool sat_ = nrSaturatedCrysIn5x5.EvalInstance() > 0;
+      vals.clear();
 
-    int scIsEB;
-    float genEnergy;
-    float scRawEnergy;
-    float scPreshowerEnergy;
-    float trkMomentumRelError;
-    float trkMomentum;
-    float eleEcalDriven;
-    float eleEcalDrivenSeed;
-    float full5x5_r9;
-    float eOverP;
-    float fbrem;
-    float gsfchi2;
-    float gsfndof;
-    float trkEta;
-    float trkPhi;
-
-    float genPt;
-    float genEta;
-    int   NtupID;
-    int   eventNumber;
-
-    int run;
-    int luminosityBlock;
-
-    float pt;
-    float scEta;
-    float corrEnergy74X;
-    float corrEnergy74XError;
-
-    float gsfnhits;
-
-    testingTree->SetBranchAddress( "scIsEB", &scIsEB );
-    testingTree->SetBranchAddress( "genEnergy", &genEnergy );
-    testingTree->SetBranchAddress( "scRawEnergy", &scRawEnergy );
-    testingTree->SetBranchAddress( "scPreshowerEnergy", &scPreshowerEnergy );
-    testingTree->SetBranchAddress( "trkMomentumRelError", &trkMomentumRelError );
-    testingTree->SetBranchAddress( "trkMomentum", &trkMomentum );
-    testingTree->SetBranchAddress( "eleEcalDriven", &eleEcalDriven );
-    testingTree->SetBranchAddress( "eleEcalDrivenSeed", &eleEcalDrivenSeed );
-    testingTree->SetBranchAddress( "eOverPuncorr", &eOverP);
-    testingTree->SetBranchAddress( "full5x5_r9", &full5x5_r9 );
-    testingTree->SetBranchAddress( "fbrem", &fbrem );
-    testingTree->SetBranchAddress( "gsfchi2", &gsfchi2 );
-    testingTree->SetBranchAddress( "gsfndof", &gsfndof );
-    testingTree->SetBranchAddress( "trkEta", &trkEta );
-    testingTree->SetBranchAddress( "trkPhi", &trkPhi );
-
-    testingTree->SetBranchAddress( "genPt", &genPt );
-    testingTree->SetBranchAddress( "genEta", &genEta );
-    testingTree->SetBranchAddress( "NtupID", &NtupID );
-    testingTree->SetBranchAddress( "eventNumber", &eventNumber );
-
-    testingTree->SetBranchAddress( "run", &run );
-    testingTree->SetBranchAddress( "luminosityBlock", &luminosityBlock );
-
-    testingTree->SetBranchAddress( "pt", &pt );
-    testingTree->SetBranchAddress( "scEta", &scEta );
-    testingTree->SetBranchAddress( "corrEnergy74X", &corrEnergy74X );
-    testingTree->SetBranchAddress( "corrEnergy74XError", &corrEnergy74XError );
-
-    testingTree->SetBranchAddress( "gsfnhits", &gsfnhits );
-
-
-    if (saveTRKvarse) {
-        friendtree->Branch("scIsEB", &scIsEB, "scIsEB/I" );
-        friendtree->Branch("genEnergy", &genEnergy, "genEnergy/F" );
-        friendtree->Branch("scRawEnergy", &scRawEnergy, "scRawEnergy/F" );
-        friendtree->Branch("scPreshowerEnergy", &scPreshowerEnergy, "scPreshowerEnergy/F" );
-        friendtree->Branch("trkMomentumRelError", &trkMomentumRelError, "trkMomentumRelError/F" );
-        friendtree->Branch("trkMomentum", &trkMomentum, "trkMomentum/F" );
-        friendtree->Branch("eleEcalDriven", &eleEcalDriven, "eleEcalDriven/F" );
-        friendtree->Branch("eleEcalDrivenSeed", &eleEcalDrivenSeed, "eleEcalDrivenSeed/F" );
-        friendtree->Branch("eOverP", &eOverP, "eOverP/F" );
-        friendtree->Branch("full5x5_r9", &full5x5_r9, "full5x5_r9/F" );
-        friendtree->Branch("fbrem", &fbrem, "fbrem/F" );
-        friendtree->Branch("gsfchi2", &gsfchi2, "gsfchi2/F" );
-        friendtree->Branch("gsfndof", &gsfndof, "gsfndof/F" );
-        friendtree->Branch("trkEta", &trkEta, "trkEta/F" );
-        friendtree->Branch("trkPhi", &trkPhi, "trkPhi/F" );
-
-        friendtree->Branch("genPt", &genPt, "genPt/F" );
-        friendtree->Branch("genEta", &genEta, "genEta/F" );
-        friendtree->Branch("NtupID", &NtupID, "NtupID/I" );
-        friendtree->Branch("eventNumber", &eventNumber, "eventNumber/I" );
-
-        friendtree->Branch("run", &run, "run/I" );
-        friendtree->Branch("luminosityBlock", &luminosityBlock, "luminosityBlock/I" );
-
-        friendtree->Branch("pt", &pt, "pt/F" );
-        friendtree->Branch("scEta", &scEta, "scEta/F" );
-        friendtree->Branch("corrEnergy74X", &corrEnergy74X, "corrEnergy74X/F" );
-        friendtree->Branch("corrEnergy74XError", &corrEnergy74XError, "corrEnergy74XError/F" );
-
-        friendtree->Branch("gsfnhits", &gsfnhits, "gsfnhits/F" );
-    }
-    // ------------------------
-
-
-
-    // #########################################
-    // This part adds on a weight variable which can be cut on
-
-    bool usePtWeightCut = true;
-
-    TRandom randomNumber;
-
-    TF1 *ptWeightFunction = new TF1( "weightFunction", "TMath::Max( TMath::Min( 1.0 ,TMath::Exp(-(x-50)/50) ), 0.01 )", 0., 6500. );
-
-    int ptWeightCut;
-    if(usePtWeightCut){
-        friendtree->Branch("ptWeightCut", &ptWeightCut, "ptWeightCut/I" );
-        }
-
-    // #########################################
-
-
-
-
-    for (Long64_t iev=0; iev<testingTree->GetEntries(); ++iev) {
-    //    for (Long64_t iev=6000000; iev<testingTree->GetEntries(); ++iev) {
-
-      response = 0.;
-      resolution = 0.;
-      if (iev%100000==0) printf("%i\n",int(iev));
-      testingTree->LoadTree(iev);
-      bool isEB = formIsEB.EvalInstance();
-      bool isEE = formIsEE.EvalInstance();
-
-      // NtupID->GetBranch()->GetEntry(iev);
-      // NtupIDVal = NtupID->GetValue();
-      // if (NtupIDVal < 5000) continue;
-
-      if (isEB) {
-	for (int i=0; i<nvarsEB; ++i) {
-	  valsEB[i] = inputformsEB[i]->EvalInstance();
-	  if (vm.count("zero") && inputformsEB[i]->GetExpFormula().EqualTo(supressVariable.c_str())) {
-	    valsEB[i] = 0.0;
-	    //	    cout << "Zeroing " << inputformsEB[i]->GetExpFormula().Data() << endl;
-	  }
-	  if (debug) cout << i << " " << inputformsEB[i]->GetExpFormula().Data() << " " << valsEB[i] << endl;
-	}
-	if (doEB) {
-	  if (doEBhighpt && generatorPt.EvalInstance() > limhighpt) {
-	    response = forestEBresponsehighpt->GetResponse(valsEB);
-	    resolution = forestEBresolutionhighpt->GetResponse(valsEB);
-	  } else {
-	    response = forestEBresponse->GetResponse(valsEB);
-	    resolution = forestEBresolution->GetResponse(valsEB);
-	  }
-	} else {
-	  response = 0.;
-	  resolution = 0.;
-	}
-      } else if(isEE) {
-	for (int i=0; i<nvarsEE; ++i) {
-	  valsEE[i] = inputformsEE[i]->EvalInstance();
-	  if (vm.count("zero") && inputformsEE[i]->GetExpFormula().EqualTo(supressVariable.c_str())) {
-	    valsEE[i] = 0.0;
-	    //	    cout << "Zeroing " << inputformsEE[i]->GetExpFormula().Data() << endl;
-	  }
-	  if (debug) cout << i << " " << inputformsEE[i]->GetExpFormula().Data() << " " << valsEE[i] << endl;
-	}
-	if (doEE) {
-	  if (doEEhighpt && generatorPt.EvalInstance() > limhighpt) {
-	    response = forestEEresponsehighpt->GetResponse(valsEE);
-	    resolution = forestEEresolutionhighpt->GetResponse(valsEE);
-	  } else {
-	    response = forestEEresponse->GetResponse(valsEE);
-	    resolution = forestEEresolution->GetResponse(valsEE);
-	  }
-	} else {
-	  response = 0.;
-	  resolution = 0.;
-	}
+      if (debug) {
+	cout << "EB: " << EB_ << endl
+	     << "EE: " << EE_ << endl
+	     << "low: " << low_ << endl
+	     << "med: " << med_ << endl
+	     << "high: " << high_ << endl
+	     << "single: " << single_ << endl
+	     << "mult: " << mult_ << endl
+	     << "sat: " << sat_ << endl;
       }
 
-      response = responseOffset + responseScale*sin(response);
-      resolution = resolutionOffset + resolutionScale*sin(resolution);
-      if (debug) cout << "response " << response << endl << "resolution " << resolution << endl;
-      if (debug) cout << "true response " << genE.EvalInstance()/rawE.EvalInstance() << endl;
-      if (testing) response = genE.EvalInstance()/rawE.EvalInstance();
-		   
-      testingTree->GetEntry(iev);
-      eOverP *= response;
+      if (EB_ && low_ && single_ && !sat_) { for (auto&& input : inputforms_EB_ecal_single_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EB_ecal_single_lowpt_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_single_lowpt_resolution->GetResponse(vals.data()); }
+      else if (EB_ && med_ && single_ && !sat_) { for (auto&& input : inputforms_EB_ecal_single_medpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EB_ecal_single_medpt_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_single_medpt_resolution->GetResponse(vals.data()); }
+      else if (EB_ && high_ && single_ && !sat_) { for (auto&& input : inputforms_EB_ecal_single_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EB_ecal_single_highpt_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_single_highpt_resolution->GetResponse(vals.data()); }
+      else if (EB_ && low_ && mult_ && !sat_) { for (auto&& input : inputforms_EB_ecal_mult_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EB_ecal_mult_lowpt_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_mult_lowpt_resolution->GetResponse(vals.data()); }
+      else if (EB_ && med_ && mult_ && !sat_) { for (auto&& input : inputforms_EB_ecal_mult_medpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EB_ecal_mult_medpt_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_mult_medpt_resolution->GetResponse(vals.data()); }
+      else if (EB_ && high_ && mult_ && !sat_) { for (auto&& input : inputforms_EB_ecal_mult_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EB_ecal_mult_highpt_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_mult_highpt_resolution->GetResponse(vals.data()); }
+      else if (EB_ && sat_) { for (auto&& input : inputforms_EB_ecal_sat) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EB_ecal_sat_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_sat_resolution->GetResponse(vals.data()); }
+      else if (EE_ && low_ && single_ && !sat_) { for (auto&& input : inputforms_EE_ecal_single_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EE_ecal_single_lowpt_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_single_lowpt_resolution->GetResponse(vals.data()); }
+      else if (EE_ && med_ && single_ && !sat_) { for (auto&& input : inputforms_EE_ecal_single_medpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EE_ecal_single_medpt_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_single_medpt_resolution->GetResponse(vals.data()); }
+      else if (EE_ && high_ && single_ && !sat_) { for (auto&& input : inputforms_EE_ecal_single_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EE_ecal_single_highpt_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_single_highpt_resolution->GetResponse(vals.data()); }
+      else if (EE_ && low_ && mult_ && !sat_) { for (auto&& input : inputforms_EE_ecal_mult_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EE_ecal_mult_lowpt_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_mult_lowpt_resolution->GetResponse(vals.data()); }
+      else if (EE_ && med_ && mult_ && !sat_) { for (auto&& input : inputforms_EE_ecal_mult_medpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EE_ecal_mult_medpt_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_mult_medpt_resolution->GetResponse(vals.data()); }
+      else if (EE_ && high_ && mult_ && !sat_) { for (auto&& input : inputforms_EE_ecal_mult_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EE_ecal_mult_highpt_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_mult_highpt_resolution->GetResponse(vals.data()); }
+      else if (EE_ && sat_) { for (auto&& input : inputforms_EE_ecal_sat) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EE_ecal_sat_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_sat_resolution->GetResponse(vals.data()); }
+    } else {
+      bool EB_ = isEB.EvalInstance();
+      bool EE_ = !EB_;
+      bool low_ = genPt.EvalInstance() < 50.;
+      bool high_ = !low_;
+      vals.clear();
 
-      if (usePtWeightCut) ptWeightCut = ( ptWeightFunction->Eval(genPt) > randomNumber.Rndm() ) ? 1 : 0 ;
+      if (genPt.EvalInstance() > 200.) { response = 1.; resolution = 0. ; } 
+      else if (EB_ && low_) { for (auto&& input : inputforms_EB_trk_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); }
+	response = forest_EB_trk_lowpt_scale->GetResponse(vals.data()); resolution = forest_EB_trk_lowpt_resolution->GetResponse(vals.data()); }
+      else if (EB_ && high_) { for (auto&& input : inputforms_EB_trk_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); }
+	response = forest_EB_trk_highpt_scale->GetResponse(vals.data()); resolution = forest_EB_trk_highpt_resolution->GetResponse(vals.data()); }
+      else if (EE_ && low_) { for (auto&& input : inputforms_EE_trk_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); }
+	response = forest_EE_trk_lowpt_scale->GetResponse(vals.data()); resolution = forest_EE_trk_lowpt_resolution->GetResponse(vals.data()); }
+      else if (EE_ && high_) { for (auto&& input : inputforms_EE_trk_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); }
+	response = forest_EE_trk_highpt_scale->GetResponse(vals.data()); resolution = forest_EE_trk_highpt_resolution->GetResponse(vals.data()); }
 
+    }
 
-      friendtree->Fill();
+    if (TMath::Abs(response) > TMath::Pi()/2 ) response = 1.0;
+    else response = responseOffset + responseScale*sin(response);
+
+    if (TMath::Abs(resolution) > TMath::Pi()/2 ) resolution = 1.0;
+    else resolution = resolutionOffset + resolutionScale*sin(resolution);
+
+    if (debug) cout << "response " << response << endl << "resolution " << resolution << endl;
+    if (debug && !doGSF) cout << "true response " << genE.EvalInstance()/rawE.EvalInstance() << endl;
+    if (debug && doGSF) cout << "true response " << genE.EvalInstance()/rawComb.EvalInstance() << endl;
+    if (testing && !doGSF) response = genE.EvalInstance()/rawE.EvalInstance();
+    if (testing && doGSF) response = genE.EvalInstance()/rawComb.EvalInstance();
+
+    if (!doGSF) eOverP = eOverPuncorr.EvalInstance()*response;
+
+    friendtree->Fill();
       
-    }
-
-
-    // Free all the memory!
-    for (std::vector<TTreeFormula*>::const_iterator it = inputformsEB.begin(); it != inputformsEB.end(); ++it) {
-      delete *it;
-    }
-    for (std::vector<TTreeFormula*>::const_iterator it = inputformsEE.begin(); it != inputformsEE.end(); ++it) {
-      delete *it;
-    }
-
-    delete[] valsEB;
-    delete[] valsEE;
-
-    // Writes output
-    outputFile->cd("een_analyzer");
-    friendtree->Write();
-    outputFile->Close();
-
-    
   }
-  
+    
+  // Writes output
+  outputFile->cd("een_analyzer");
+  friendtree->Write();
+  outputFile->Close();
+    
+    
 }
+  
+
