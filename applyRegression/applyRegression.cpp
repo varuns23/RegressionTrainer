@@ -28,10 +28,21 @@ using namespace boost::program_options;
 using namespace boost::filesystem;
 
 #define debug true
+#define debug2 true
 #define testing false
 
+bool replace(std::string& str, const std::string& from, const std::string& to) {
+  size_t start_pos = str.find(from);
+  if(start_pos == std::string::npos)
+    return false;
+  str.replace(start_pos, from.length(), to);
+  return true;
+}
+
 int main(int argc, char** argv) {
-  
+
+  int ibetter = 0;
+  int iworse = 0;
 
   string configPrefix;
   string trainingPrefix;
@@ -65,15 +76,22 @@ int main(int argc, char** argv) {
     doGSF = true;
   }
 
+  if (!vm.count("config")) {
+    configPrefix = trainingPrefix;
+    replace(configPrefix, "../", "../python/");
+  }
+
   double responseMin = 0.5 ;
   double responseMax = 2.1 ;
   double resolutionMin = 0.0002 ;
   double resolutionMax = 0.5 ;
 
-  if (!doGSF) {
+  if (doGSF) {
     responseMin = 0.8;
     responseMax = 1.5;
   }
+
+  cout << "Response parameters "  << responseMin << " " << responseMax << endl;
 
   double responseScale = 0.5*( responseMax - responseMin );
   double responseOffset = responseMin + 0.5*( responseMax - responseMin );
@@ -139,7 +157,7 @@ int main(int argc, char** argv) {
     file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_mult_lowpt_results.root", trainingPrefix.c_str())));  
     forest_EB_ecal_mult_lowpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
     forest_EB_ecal_mult_lowpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
-    file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_mult_medpt_results.save.root", trainingPrefix.c_str())));  
+    file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_mult_medpt_results.root", trainingPrefix.c_str())));  
     forest_EB_ecal_mult_medpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
     forest_EB_ecal_mult_medpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
     file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_mult_highpt_results.root", trainingPrefix.c_str())));  
@@ -217,17 +235,19 @@ int main(int argc, char** argv) {
   ParReader reader_EE_ecal_mult_highpt; reader_EE_ecal_mult_highpt.read(TString::Format("%s_EE_ecal_mult_highpt.config", configPrefix.c_str()).Data());
   ParReader reader_EE_ecal_sat; reader_EE_ecal_sat.read(TString::Format("%s_EE_ecal_sat.config", configPrefix.c_str()).Data());
 
-  ParReader reader_EB_trk_lowpt; reader_EB_trk_lowpt.read(TString::Format("%s_EB_trk_lowpt.config", configPrefix.c_str()).Data());
-  ParReader reader_EB_trk_highpt; reader_EB_trk_highpt.read(TString::Format("%s_EB_trk_highpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EB_trk_lowpt; if (doGSF) reader_EB_trk_lowpt.read(TString::Format("%s_EB_trk_lowpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EB_trk_highpt; if (doGSF) reader_EB_trk_highpt.read(TString::Format("%s_EB_trk_highpt.config", configPrefix.c_str()).Data());
 
-  ParReader reader_EE_trk_lowpt; reader_EE_trk_lowpt.read(TString::Format("%s_EE_trk_lowpt.config", configPrefix.c_str()).Data());
-  ParReader reader_EE_trk_highpt; reader_EE_trk_highpt.read(TString::Format("%s_EE_trk_highpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EE_trk_lowpt; if (doGSF) reader_EE_trk_lowpt.read(TString::Format("%s_EE_trk_lowpt.config", configPrefix.c_str()).Data());
+  ParReader reader_EE_trk_highpt; if (doGSF) reader_EE_trk_highpt.read(TString::Format("%s_EE_trk_highpt.config", configPrefix.c_str()).Data());
 
   TFile* testingFile = TFile::Open(testingFileName.c_str());
   TTree* testingTree = isElectron ? (TTree*) testingFile->Get("een_analyzer/ElectronTree") : (TTree*) testingFile->Get("een_analyzer/PhotonTree");
   
   TTreeFormula genE("genEnergy", "genEnergy", testingTree);
   TTreeFormula genPt("genPt", "genPt", testingTree);
+  TTreeFormula oldE("corrEnergy74X", "corrEnergy74X", testingTree);
+  TTreeFormula oldEerror("corrEnergy74XError", "corrEnergy74XError", testingTree);
   TTreeFormula isEB("isEB", "isEB", testingTree);
   TTreeFormula numberOfClusters("numberOfClusters", "numberOfClusters", testingTree);
   TTreeFormula nrSaturatedCrysIn5x5("nrSaturatedCrysIn5x5", "nrSaturatedCrysIn5x5", testingTree);
@@ -266,13 +286,16 @@ int main(int argc, char** argv) {
   { tokenizer<char_separator<char>> tokens(reader_EE_ecal_sat.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_sat.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
 
   std::vector<TTreeFormula*> inputforms_EB_trk_lowpt;
-  { tokenizer<char_separator<char>> tokens(reader_EB_trk_lowpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_trk_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
   std::vector<TTreeFormula*> inputforms_EB_trk_highpt;
-  { tokenizer<char_separator<char>> tokens(reader_EB_trk_highpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_trk_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
   std::vector<TTreeFormula*> inputforms_EE_trk_lowpt;
-  { tokenizer<char_separator<char>> tokens(reader_EE_trk_lowpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_trk_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
   std::vector<TTreeFormula*> inputforms_EE_trk_highpt;
-  { tokenizer<char_separator<char>> tokens(reader_EE_trk_highpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_trk_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  
+  if (doGSF) {
+    { tokenizer<char_separator<char>> tokens(reader_EB_trk_lowpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_trk_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+    { tokenizer<char_separator<char>> tokens(reader_EB_trk_highpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_trk_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+    { tokenizer<char_separator<char>> tokens(reader_EE_trk_lowpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_trk_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+    { tokenizer<char_separator<char>> tokens(reader_EE_trk_highpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_trk_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
+  }
 
   std::vector<float> vals;
   Float_t response = 0.;
@@ -375,7 +398,13 @@ int main(int argc, char** argv) {
     if (TMath::Abs(resolution) > TMath::Pi()/2 ) resolution = 1.0;
     else resolution = resolutionOffset + resolutionScale*sin(resolution);
 
+    if (debug) cout << "raw + PS " << rawE.EvalInstance() << endl;
     if (debug) cout << "response " << response << endl << "resolution " << resolution << endl;
+    if (debug) cout << "74X response " << oldE.EvalInstance()/rawE.EvalInstance() << endl << "74X resolution " << oldEerror.EvalInstance()/oldE.EvalInstance() << endl;
+    if (debug2) { 
+      if ( std::abs(oldE.EvalInstance()/rawE.EvalInstance() - genE.EvalInstance()/rawE.EvalInstance()) < std::abs(response - genE.EvalInstance()/rawE.EvalInstance()) ) { std::cout << "WORSE" << std::endl; iworse++; } else { std::cout << "BETTER" << std::endl; ibetter++; }
+      cout << ibetter << " -- " << iworse << endl;
+    }
     if (debug && !doGSF) cout << "true response " << genE.EvalInstance()/rawE.EvalInstance() << endl;
     if (debug && doGSF) cout << "true response " << genE.EvalInstance()/rawComb.EvalInstance() << endl;
     if (testing && !doGSF) response = genE.EvalInstance()/rawE.EvalInstance();
