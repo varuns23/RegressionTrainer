@@ -86,11 +86,6 @@ int main(int argc, char** argv) {
   double resolutionMin = 0.0002 ;
   double resolutionMax = 0.5 ;
 
-  if (doGSF) {
-    responseMin = 0.8;
-    responseMax = 1.5;
-  }
-
   cout << "Response parameters "  << responseMin << " " << responseMax << endl;
 
   double responseScale = 0.5*( responseMax - responseMin );
@@ -253,7 +248,7 @@ int main(int argc, char** argv) {
   TTreeFormula nrSaturatedCrysIn5x5("nrSaturatedCrysIn5x5", "nrSaturatedCrysIn5x5", testingTree);
   TTreeFormula eOverPuncorr("eOverPuncorr", "eOverPuncorr", testingTree);
   TTreeFormula rawE("rawEnergy+preshowerEnergy", "rawEnergy+preshowerEnergy", testingTree);
-  TTreeFormula rawComb("rawComb", "( genEnergy * (trkMomentum*trkMomentum*trkMomentumRelError*trkMomentumRelError + (rawEnergy+preshowerEnergy)*(rawEnergy+preshowerEnergy)*resolution*resolution) / ( (rawEnergy+preshowerEnergy)*response*trkMomentum*trkMomentum*trkMomentumRelError*trkMomentumRelError + trkMomentum*(rawEnergy+preshowerEnergy)*(rawEnergy+preshowerEnergy)*resolution*resolution ))", testingTree);
+  TTreeFormula rawComb("rawComb", "( 1. / ( (trkMomentum*trkMomentum*trkMomentumRelError*trkMomentumRelError + (rawEnergy+preshowerEnergy)*(rawEnergy+preshowerEnergy)*resolution*resolution) / ( (rawEnergy+preshowerEnergy)*response*trkMomentum*trkMomentum*trkMomentumRelError*trkMomentumRelError + trkMomentum*(rawEnergy+preshowerEnergy)*(rawEnergy+preshowerEnergy)*resolution*resolution ) ) )", testingTree);
   
   char_separator<char> sep(":");
   std::vector<TTreeFormula*> inputforms_EB_ecal_single_lowpt;
@@ -381,13 +376,13 @@ int main(int argc, char** argv) {
       vals.clear();
 
       if (genPt.EvalInstance() > 200.) { response = 1.; resolution = 0. ; } 
-      else if (EB_ && low_) { for (auto&& input : inputforms_EB_trk_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); }
+      else if (EB_ && low_) { for (auto&& input : inputforms_EB_trk_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if (debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; }
 	response = forest_EB_trk_lowpt_scale->GetResponse(vals.data()); resolution = forest_EB_trk_lowpt_resolution->GetResponse(vals.data()); }
-      else if (EB_ && high_) { for (auto&& input : inputforms_EB_trk_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); }
+      else if (EB_ && high_) { for (auto&& input : inputforms_EB_trk_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if (debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; }
 	response = forest_EB_trk_highpt_scale->GetResponse(vals.data()); resolution = forest_EB_trk_highpt_resolution->GetResponse(vals.data()); }
-      else if (EE_ && low_) { for (auto&& input : inputforms_EE_trk_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); }
+      else if (EE_ && low_) { for (auto&& input : inputforms_EE_trk_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if (debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; }
 	response = forest_EE_trk_lowpt_scale->GetResponse(vals.data()); resolution = forest_EE_trk_lowpt_resolution->GetResponse(vals.data()); }
-      else if (EE_ && high_) { for (auto&& input : inputforms_EE_trk_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); }
+      else if (EE_ && high_) { for (auto&& input : inputforms_EE_trk_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if (debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; }
 	response = forest_EE_trk_highpt_scale->GetResponse(vals.data()); resolution = forest_EE_trk_highpt_resolution->GetResponse(vals.data()); }
 
     }
@@ -398,12 +393,18 @@ int main(int argc, char** argv) {
     if (TMath::Abs(resolution) > TMath::Pi()/2 ) resolution = 1.0;
     else resolution = resolutionOffset + resolutionScale*sin(resolution);
 
-    if (debug) cout << "raw + PS " << rawE.EvalInstance() << endl;
+    if (debug && !doGSF) cout << "raw + PS " << rawE.EvalInstance() << endl;
+    if (debug && doGSF) cout << "raw Comb " << rawComb.EvalInstance() << endl;
     if (debug) cout << "response " << response << endl << "resolution " << resolution << endl;
     if (debug) cout << "74X response " << oldE.EvalInstance()/rawE.EvalInstance() << endl << "74X resolution " << oldEerror.EvalInstance()/oldE.EvalInstance() << endl;
     if (debug2) { 
-      if ( std::abs(oldE.EvalInstance()/rawE.EvalInstance() - genE.EvalInstance()/rawE.EvalInstance()) < std::abs(response - genE.EvalInstance()/rawE.EvalInstance()) ) { std::cout << "WORSE" << std::endl; iworse++; } else { std::cout << "BETTER" << std::endl; ibetter++; }
-      cout << ibetter << " -- " << iworse << endl;
+      if (!doGSF) {
+	if ( std::abs(oldE.EvalInstance()/rawE.EvalInstance() - genE.EvalInstance()/rawE.EvalInstance()) < std::abs(response - genE.EvalInstance()/rawE.EvalInstance()) ) { std::cout << "WORSE" << std::endl; iworse++; } else { std::cout << "BETTER" << std::endl; ibetter++; }
+	cout << ibetter << " -- " << iworse << endl;
+      } else {
+	if ( std::abs(oldE.EvalInstance()/rawE.EvalInstance() - genE.EvalInstance()/rawE.EvalInstance()) < std::abs(response - genE.EvalInstance()/rawComb.EvalInstance()) ) { std::cout << "WORSE" << std::endl; iworse++; } else { std::cout << "BETTER" << std::endl; ibetter++; }
+	cout << ibetter << " -- " << iworse << endl;
+      }	
     }
     if (debug && !doGSF) cout << "true response " << genE.EvalInstance()/rawE.EvalInstance() << endl;
     if (debug && doGSF) cout << "true response " << genE.EvalInstance()/rawComb.EvalInstance() << endl;
