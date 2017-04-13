@@ -27,8 +27,8 @@ using namespace boost;
 using namespace boost::program_options;
 using namespace boost::filesystem;
 
-#define debug true
-#define debug2 true
+#define debug false
+#define debug2 false
 #define testing false
 
 bool replace(std::string& str, const std::string& from, const std::string& to) {

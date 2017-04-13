@@ -28,7 +28,7 @@ for ievent in xrange(inputTree1.GetEntries()):
     response[0]   = inputTree2.response
     resolution[0] = inputTree2.resolution
     eOverP[0] = inputTree2.eOverP
-    e80xECALonly[0] = inputTree2.response*(inputTree2.scRawEnergy+inputTree2.scPreshowerEnergy)
+    e80xECALonly[0] = inputTree2.response*(inputTree1.rawEnergy+inputTree1.preshowerEnergy)
     outputTree.Fill()
 
 outputTree.Write()
