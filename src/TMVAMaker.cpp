@@ -39,6 +39,7 @@ TMVAMaker::TMVAMaker():
     m_name("regression"),
     m_tree(NULL),
     m_factory(NULL),
+    m_dataloader(NULL),
     //m_fileIn(NULL),
     m_fileOut(NULL)
 /*****************************************************************/
@@ -81,6 +82,13 @@ void TMVAMaker::close()
         delete m_factory;
         m_factory = NULL;
     }
+    if(m_dataloader) 
+    {
+        //m_dataloader->Delete();
+        delete m_dataloader;
+        m_dataloader = NULL;
+    }
+    
 
 
 }
@@ -132,7 +140,8 @@ bool TMVAMaker::init(const string& name,
     m_fileOut->cd();
 
     m_factory = new TMVA::Factory(name.c_str(), m_fileOut,options.c_str());
-    m_factory->AddRegressionTree(m_tree);
+    m_dataloader = new TMVA::DataLoader(name.c_str());
+    m_dataloader->AddRegressionTree(m_tree);
 
     return true;
 }
@@ -143,36 +152,36 @@ bool TMVAMaker::init(const string& name,
 void TMVAMaker::addVariable(const string& name)
 /*****************************************************************/
 {
-    if(!m_factory)
+    if(!m_dataloader)
     {
         cout << "ERROR: TMVAMaker::addVariable(): Cannot add variable: factory doesn't exist\n";
         return;
     }
-    m_factory->AddVariable(name.c_str());
+    m_dataloader->AddVariable(name.c_str());
 }
 
 /*****************************************************************/
 void TMVAMaker::addSpectator(const string& name)
 /*****************************************************************/
 {
-    if(!m_factory)
+    if(!m_dataloader)
     {
         cout << "ERROR: TMVAMaker::addSpectator(): Cannot add spectator: factory doesn't exist\n";
         return;
     }
-    m_factory->AddSpectator(name.c_str());
+    m_dataloader->AddSpectator(name.c_str());
 }
 
 /*****************************************************************/
 void TMVAMaker::addTarget(const string& name)
 /*****************************************************************/
 {
-    if(!m_factory)
+    if(!m_dataloader)
     {
         cout << "ERROR: TMVAMaker::addTarget(): Cannot add target: factory doesn't exist\n";
         return;
     }
-    m_factory->AddTarget(name.c_str());
+    m_dataloader->AddTarget(name.c_str());
 }
 
 
@@ -181,7 +190,7 @@ void TMVAMaker::prepareTrainingAndTest(const string& cut, const string& options)
 /*****************************************************************/
 {
     TCut tcut(cut.c_str());
-    m_factory->PrepareTrainingAndTestTree(tcut, options.c_str() ); 
+    m_dataloader->PrepareTrainingAndTestTree(tcut, options.c_str() ); 
 }
 
 
@@ -189,7 +198,7 @@ void TMVAMaker::prepareTrainingAndTest(const string& cut, const string& options)
 void TMVAMaker::bookMethod(const string& method, const string& options)
 /*****************************************************************/
 {
-    m_factory->BookMethod(method.c_str(), m_name.c_str(), options.c_str()); 
+  m_factory->BookMethod(m_dataloader, method.c_str(), m_name.c_str(), options.c_str()); 
 }
 
 
@@ -200,7 +209,7 @@ void TMVAMaker::run()
     cout << "INFO: run regression " << m_name << "\n";
     m_fileOut->cd();
     m_factory->TrainAllMethods();
-    MethodBDT* method = dynamic_cast<MethodBDT*>(m_factory->GetMethod(m_name.c_str()));
+    MethodBDT* method = dynamic_cast<MethodBDT*>(m_factory->GetMethod(m_name.c_str(), ""));
     const Ranking* ranking = method->CreateRanking();
     cout << "INFO: TMVAMaker::run(): Printing variable ranking\n";
     ranking->Print();

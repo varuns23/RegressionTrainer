@@ -25,7 +25,7 @@
 
 // ROOT
 #include <TMVA/Factory.h>
-
+#include <TMVA/DataLoader.h>
 
 class TChain;
 
@@ -55,6 +55,7 @@ class TMVAMaker
         std::string m_name;
         TChain* m_tree;
         TMVA::Factory* m_factory;
+	TMVA::DataLoader *m_dataloader;
         //TFile* m_fileIn;
         TFile* m_fileOut;
 
