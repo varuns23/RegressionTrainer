@@ -316,12 +316,12 @@ void HybridGBRMaker::runEB(const string& cutBase, const string& cutEB, const str
 
     //create RooDataSet from TChain
     RooDataSet *hdataEB = RooTreeConvert::CreateDataSet("hdataEB", m_tree, varsEB, weightvarEB);   
-
+    cout << "RCLSA: number of entries " << hdataEB->numEntries() << endl;
     //RooRealVars corresponding to regressed parameters (sigma, mean, left tail parameter, right tail parameter)
     RooRealVar sigwidthtvarEB("sigwidthtvarEB","",0.01);
     sigwidthtvarEB.setConstant(false);
 
-    RooRealVar sigmeantvarEB("sigmeantvarEB","",1.);
+    RooRealVar sigmeantvarEB("sigmeantvarEB","",0.005);
     sigmeantvarEB.setConstant(false); 
 
     RooRealVar signvarEB("signvarEB","",3.);
@@ -358,13 +358,10 @@ void HybridGBRMaker::runEB(const string& cutBase, const string& cutEB, const str
     tgtsEB.add(*sign2tEB);  
 
     //define transformations corresponding to parameter bounds for non-parametric outputs  
-    RooRealConstraint sigwidthlimEB("sigwidthlimEB","",*sigwidthtEB,0.0002,0.5);
-    
-    // RooRealConstraint sigmeanlimEB("sigmeanlimEB","",*sigmeantEB,0.2,2.0);
+    RooRealConstraint sigwidthlimEB("sigwidthlimEB","",*sigwidthtEB,0.001,0.4);
     RooRealConstraint sigmeanlimEB("sigmeanlimEB","",*sigmeantEB,m_scaleMin,m_scaleMax);
-
-    RooRealConstraint signlimEB("signlimEB","",*signtEB,1.01,5000.); 
-    RooRealConstraint sign2limEB("sign2limEB","",*sign2tEB,1.01,5000.); 
+    RooRealConstraint signlimEB("signlimEB","",*signtEB,1.01,50.); 
+    RooRealConstraint sign2limEB("sign2limEB","",*sign2tEB,1.01,50.); 
 
     //define pdf, which depends on transformed outputs (and is intended to be treated as a conditional pdf over the
     //regression inputs in this case)
@@ -574,7 +571,7 @@ void HybridGBRMaker::runEE(const string& cutBase, const string& cutEE, const str
     RooRealVar sigwidthtvarEE("sigwidthtvarEE","",0.01);
     sigwidthtvarEE.setConstant(false);
 
-    RooRealVar sigmeantvarEE("sigmeantvarEE","",1.);
+    RooRealVar sigmeantvarEE("sigmeantvarEE","",0.005);
     sigmeantvarEE.setConstant(false); 
 
     RooRealVar signvarEE("signvarEE","",3.);
@@ -611,10 +608,10 @@ void HybridGBRMaker::runEE(const string& cutBase, const string& cutEE, const str
     tgtsEE.add(*sign2tEE);  
 
     //define transformations corresponding to parameter bounds for non-parametric outputs  
-    RooRealConstraint sigwidthlimEE("sigwidthlimEE","",*sigwidthtEE,0.0002,0.5);
+    RooRealConstraint sigwidthlimEE("sigwidthlimEE","",*sigwidthtEE,0.001,0.1);
     RooRealConstraint sigmeanlimEE("sigmeanlimEE","",*sigmeantEE,m_scaleMin,m_scaleMax); // THOMAS: Up from 0.2 to 2.0
-    RooRealConstraint signlimEE("signlimEE","",*signtEE,1.01,5000.); 
-    RooRealConstraint sign2limEE("sign2limEE","",*sign2tEE,1.01,5000.); 
+    RooRealConstraint signlimEE("signlimEE","",*signtEE,1.01,50.); 
+    RooRealConstraint sign2limEE("sign2limEE","",*sign2tEE,1.01,50.); 
 
     //define pdf, which depends on transformed outputs (and is intended to be treated as a conditional pdf over the
     //regression inputs in this case)

@@ -28,8 +28,6 @@ using namespace boost::program_options;
 using namespace boost::filesystem;
 
 #define debug false
-#define debug2 false
-#define testing false
 
 bool replace(std::string& str, const std::string& from, const std::string& to) {
   size_t start_pos = str.find(from);
@@ -230,15 +228,23 @@ int main(int argc, char** argv) {
       response = forest_EE_full_pt3_scale->GetResponse(vals.data()); resolution = forest_EE_full_pt3_resolution->GetResponse(vals.data()); }
 
 
-    if (TMath::Abs(response) > TMath::Pi()/2 ) response = 1.0;
+    if (TMath::Abs(response) > TMath::Pi()/2 ) response = 0.0;
     else response = responseOffset + responseScale*sin(response);
   
     if (TMath::Abs(resolution) > TMath::Pi()/2 ) resolution = 1.0;
     else resolution = resolutionOffset + resolutionScale*sin(resolution);
+
+    response = TMath::Exp(response);
+    resolution = TMath::Abs(response)*resolution;
   
     if (debug) cout << "91X response " << response << endl;
+    if (EB_) {
+      if (debug) cout << "GEN (91X) response " << genEnergy.EvalInstance()/clusrawE.EvalInstance() << endl;
+    } else {
+      if (debug) cout << "GEN (91X) response " << genEnergy.EvalInstance()/(clusrawE.EvalInstance()+clusPS1.EvalInstance()+clusPS2.EvalInstance()) << endl;
+    }
     if (debug) cout << "74X response " << cluscorrE.EvalInstance()/clusrawE.EvalInstance() << endl;
-    if (debug) cout << "GEN response " << genEnergy.EvalInstance()/clusrawE.EvalInstance() << endl;
+    if (debug) cout << "GEN (74X) response " << genEnergy.EvalInstance()/clusrawE.EvalInstance() << endl;
     
     friendtree->Fill();
   }
