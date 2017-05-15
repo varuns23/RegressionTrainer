@@ -36,6 +36,8 @@ def Plot():
     parser.add_argument( 'picklefiles', metavar='N', type=str, nargs='+', help='Give a list of fitted pickle files to plot')
     parser.add_argument( '--compare', action='store_true', help='Compare the two given pickle files')
     parser.add_argument( '--override', action='store_true', help='Overrrides certain plot options (set in Plot.py)')
+    parser.add_argument( '--large', action='store_true', help='Makes large plots (set in Plot.py)')
+    parser.add_argument( '--small', action='store_true', help='Makes small plots (set in Plot.py)')
     args = parser.parse_args()    
 
 
@@ -54,14 +56,32 @@ def Plot():
             with open( pickle_fn, 'rb' ) as pickle_fp:
                 sliceplot = pickle.load( pickle_fp )
 
+            sliceplot.sliceplot_y_min = 0.905
+            sliceplot.sliceplot_y_max = 1.105
+            
+            sliceplot.sliceplotsigma_y_min   = 0.0005
+            sliceplot.sliceplotsigma_y_max   = 0.1005
 
             if args.override:
                 sliceplot.sliceplot_y_min = 0.905
-                sliceplot.sliceplot_y_max = 1.095
+                sliceplot.sliceplot_y_max = 1.105
 
                 sliceplot.sliceplotsigma_y_min   = 0.0005
                 sliceplot.sliceplotsigma_y_max   = 0.1005
 
+            if args.large:
+                sliceplot.sliceplot_y_min = 0.705
+                sliceplot.sliceplot_y_max = 1.305
+
+                sliceplot.sliceplotsigma_y_min   = 0.0005
+                sliceplot.sliceplotsigma_y_max   = 0.3005
+
+            if args.large:
+                sliceplot.sliceplot_y_min = 0.955
+                sliceplot.sliceplot_y_max = 1.055
+
+                sliceplot.sliceplotsigma_y_min   = 0.0005
+                sliceplot.sliceplotsigma_y_max   = 0.0505
 
 
             if args.plotdir:

@@ -250,7 +250,7 @@ def Fit():
     allPt_bounds += [100.0]
     
     if doZS:
-        allPt_bounds = [ 0.25  + 0.575*i for i in xrange(11) ]
+        allPt_bounds = [ 0.25  + 1.15*i for i in xrange(6) ]
     
     print allPt_bounds
     print globalPt_bounds
@@ -301,6 +301,12 @@ def Fit():
         else:
             genEta_bounds = [ 1.4 + 0.055*i for i in xrange(21) ]
 
+        if doZS:
+            if dobarrel:
+                genEta_bounds = [ 0.0 + 0.3*i for i in xrange(6) ]
+            else:
+                genEta_bounds = [ 1.4 + 0.22*i for i in xrange(6) ]
+
         genEta_name = 'GENETA-{0:04d}-{1:04d}'.format( int(min_globalPt), int(max_globalPt) )
         genEta_sliceplot = SlicePlot(
             name     = genEta_name,
@@ -319,7 +325,10 @@ def Fit():
         # ======================================
         # nvtx plot
 
-        nvtx_bounds = [ 0.0 + 5*i for i in xrange(13) ]
+        if doZS:
+            nvtx_bounds = [ 0.0 + 5*i for i in xrange(13) ]
+        else:
+            nvtx_bounds = [ 0.0 + 15*i for i in xrange(5) ]
 
         nvtx_name = 'NVTX-{0:04d}-{1:04d}'.format( int(min_globalPt), int(max_globalPt) )
         nvtx_sliceplot = SlicePlot(
@@ -340,7 +349,7 @@ def Fit():
         # clusSize plot
 
         if doZS:
-            clusSize_bounds = [ 0.0 + i for i in xrange(6) ]
+            clusSize_bounds = [ 0., 1., 2., 5. ]
         else:
             clusSize_bounds = [ 0.0 + 5*i for i in xrange(6) ]
         
