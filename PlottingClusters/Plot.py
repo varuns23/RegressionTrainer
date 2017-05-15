@@ -56,11 +56,11 @@ def Plot():
 
 
             if args.override:
-                sliceplot.sliceplot_y_min = 0.9965
-                sliceplot.sliceplot_y_max = 1.0035
+                sliceplot.sliceplot_y_min = 0.905
+                sliceplot.sliceplot_y_max = 1.095
 
                 sliceplot.sliceplotsigma_y_min   = 0.0005
-                sliceplot.sliceplotsigma_y_max   = 0.0605
+                sliceplot.sliceplotsigma_y_max   = 0.1005
 
 
 

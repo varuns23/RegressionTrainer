@@ -63,6 +63,7 @@ def Fit():
 
     parser = argparse.ArgumentParser()
     parser.add_argument( '--region', type=str, default='TODO', choices=[ 'EB', 'EE', 'TODO' ] )
+    parser.add_argument( '--flag', type=str, default='TODO', choices=[ 'ZS', 'FULL', 'TODO' ] )
     parser.add_argument( '--ntup', type=str, help='Pass path to an Ntuple')
     parser.add_argument( '--ptbins', metavar='N', type=float, nargs='+',
                          help='supply a list of global pt bins (there is a default list in the code)' )
@@ -81,13 +82,21 @@ def Fit():
         region = 'EE'
         dobarrel = False
 
-    plotdir = 'plotsPY_pfClusters_{0}'.format( region )
+    if args.flag == 'ZS':
+        flag = 'ZS'
+        doZS = True
+    elif args.flag == 'FULL':
+        flag = 'FULL'
+        doZS = False
+
+    plotdir = 'plotsPY_pfClusters_{0}_{1}'.format( region, flag )
 
     tree_name = 'PfTree'
 
     pline()
     print 'Summary of input data for Fit.py:'
     print '    region:    ' + region
+    print '    flag:      ' + flag
     print '    plotdir:   ' + plotdir
     print '    ntuple:    ' + args.ntup
     print '    ntup tree: ' + tree_name
@@ -121,26 +130,29 @@ def Fit():
     # ======================================
     # Set ranges where reasonably possible
 
-    clusrawE.setRange(0., 300.)
-    cluscorrE.setRange(0., 300.)
-    genEnergy.setRange(0., 300.)
+    clusrawE.setRange(0., 350.)
+    cluscorrE.setRange(0., 350.)
+    genEnergy.setRange(0., 350.)
 
-    clusPt.setRange(0., 100.)
-    genPt.setRange(0., 100.)
+    clusPt.setRange(0., 150.)
+    genPt.setRange(0., 150.)
 
     clusPhi.setRange(-ROOT.TMath.Pi(), ROOT.TMath.Pi())
     genPhi.setRange(-ROOT.TMath.Pi(), ROOT.TMath.Pi())
 
-    clusSize.setRange(0., 25.)
-    nvtx.setRange(0., 60.)
+    clusSize.setRange(0., 30.)
+    nvtx.setRange(0., 80.)
 
     if dobarrel:
-        clusEta.setRange(-1.5, 1.5)
-        genEta.setRange(-1.5, 1.5)
+        clusEta.setRange(-1.6, 1.6)
+        genEta.setRange(-1.6, 1.6)
     else:
         clusEta.setRange(-3.,3.)
         genEta.setRange(-3,3)
 
+    if doZS:
+        clusPt.setRange(0., 6.)
+        genPt.setRange(0., 6.)        
 
     # ======================================
     # Define which vars to use
@@ -172,7 +184,7 @@ def Fit():
 
     print 'Getting dataset (using the macro)'
     eventcut = ''
-    hdata = ROOT.LoadDataset( eventcut, dobarrel, args.ntup, 'een_analyzer', tree_name, VarsArgList )
+    hdata = ROOT.LoadDataset( eventcut, dobarrel, doZS, args.ntup, 'een_analyzer', tree_name, VarsArgList )
     print '  Using {0} entries'.format( hdata.numEntries() )
 
 
@@ -220,15 +232,29 @@ def Fit():
             18.,
             100.
             ]
+        # ZS pt bins
+        if doZS:
+            globalPt_bounds = [
+                0.25,
+                6.0
+                ]
+
     else:
         globalPt_bounds = args.ptbins
 
 
-    allPt_bounds = [0.25,100.]
-    allPt_bounds += [ 0.25  + 0.425*i for i in xrange(10) ]
+    allPt_bounds = [0.25]
+    allPt_bounds += [ 0.25  + 0.425*i for i in xrange(1,10) ]
     allPt_bounds += [ 4.5   + 1.35*i  for i in xrange(10) ]
-    allPt_bounds += [ 100.0 + 8.2*i   for i in xrange(10) ]
+    allPt_bounds += [ 18.0  + 8.2*i   for i in xrange(10) ]
+    allPt_bounds += [100.0]
     
+    if doZS:
+        allPt_bounds = [ 0.25  + 0.575*i for i in xrange(11) ]
+    
+    print allPt_bounds
+    print globalPt_bounds
+
     for i_globalPtBin in xrange(len(globalPt_bounds)-1):
 
         min_globalPt = globalPt_bounds[i_globalPtBin]
@@ -254,7 +280,7 @@ def Fit():
         genPt_name = 'GENPT-{0:04d}-{1:04d}'.format( int(min_globalPt), int(max_globalPt) )
         genPt_sliceplot = SlicePlot(
             name     = genPt_name,
-            longname = region + '_' + genPt_name,
+            longname = region + flag + '_' + genPt_name,
             plotdir  = plotdir
             )
         genPt_sliceplot.SetDataset( hdata_globalPtBin )
@@ -271,14 +297,14 @@ def Fit():
         # genEta plot
 
         if dobarrel:
-            genEta_bounds = [ 0.0 + 0.0375*i for i in xrange(41) ]
+            genEta_bounds = [ 0.0 + 0.075*i for i in xrange(21) ]
         else:
-            genEta_bounds = [ 1.4 + 0.0275*i for i in xrange(41) ]
+            genEta_bounds = [ 1.4 + 0.055*i for i in xrange(21) ]
 
         genEta_name = 'GENETA-{0:04d}-{1:04d}'.format( int(min_globalPt), int(max_globalPt) )
         genEta_sliceplot = SlicePlot(
             name     = genEta_name,
-            longname = region + '_' + genEta_name,
+            longname = region + flag + '_' + genEta_name,
             plotdir  = plotdir
             )
         genEta_sliceplot.SetDataset( hdata_globalPtBin )
@@ -289,6 +315,49 @@ def Fit():
             '#eta_{gen}'
             )
         genEta_sliceplot.FitSlices()
+
+        # ======================================
+        # nvtx plot
+
+        nvtx_bounds = [ 0.0 + 5*i for i in xrange(13) ]
+
+        nvtx_name = 'NVTX-{0:04d}-{1:04d}'.format( int(min_globalPt), int(max_globalPt) )
+        nvtx_sliceplot = SlicePlot(
+            name     = nvtx_name,
+            longname = region + flag + '_' + nvtx_name,
+            plotdir  = plotdir
+            )
+        nvtx_sliceplot.SetDataset( hdata_globalPtBin )
+        nvtx_sliceplot.SetHistVars(histogramVariables)
+        nvtx_sliceplot.SetSliceVar(
+            nvtx,
+            nvtx_bounds,
+            'n_{vtx}'
+            )
+        nvtx_sliceplot.FitSlices()
+
+        # ======================================
+        # clusSize plot
+
+        if doZS:
+            clusSize_bounds = [ 0.0 + i for i in xrange(6) ]
+        else:
+            clusSize_bounds = [ 0.0 + 5*i for i in xrange(6) ]
+        
+        clusSize_name = 'CLUSSIZE-{0:04d}-{1:04d}'.format( int(min_globalPt), int(max_globalPt) )
+        clusSize_sliceplot = SlicePlot(
+            name     = clusSize_name,
+            longname = region + flag + '_' + clusSize_name,
+            plotdir  = plotdir
+            )
+        clusSize_sliceplot.SetDataset( hdata_globalPtBin )
+        clusSize_sliceplot.SetHistVars(histogramVariables)
+        clusSize_sliceplot.SetSliceVar(
+            clusSize,
+            clusSize_bounds,
+            'size'
+            )
+        clusSize_sliceplot.FitSlices()
 
 
 ########################################

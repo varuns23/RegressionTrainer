@@ -164,6 +164,7 @@ LoadedWS LoadWorkspace(
 RooDataSet* LoadDataset(
     TString eventcut_string,
     Bool_t  dobarrel,
+    Bool_t  doZS,
     TString tree_file,
     TString tree_directory,
     TString tree_name,
@@ -173,10 +174,18 @@ RooDataSet* LoadDataset(
 
     TCut eventcut  = (TCut)eventcut_string;
     TCut regioncut;
-    if (dobarrel)
-        regioncut = "clusLayer==-1";
-    else
-        regioncut = "clusLayer==-2";
+    if (dobarrel) {
+      if (doZS) 
+        regioncut = "clusLayer==-1 && clusFlag==1";
+      else 
+        regioncut = "clusLayer==-1 && clusFlag==3";
+    }
+    else {
+      if (doZS) 
+        regioncut = "clusLayer==-2 && clusFlag==1";
+      else 
+        regioncut = "clusLayer==-2 && clusFlag==3";
+    }
 
     RooRealVar weightvar( "weightvar", "genEnergy > 0." ,1.);
     weightvar.SetTitle( eventcut * regioncut );
