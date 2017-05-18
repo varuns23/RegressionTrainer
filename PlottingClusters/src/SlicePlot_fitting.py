@@ -65,10 +65,11 @@ def FitOneSlice( self, hdata_reduced, histvar, unbinnedFit=False ):
     hdata_fit = hdata_reduced.reduce( ROOT.RooArgSet(histvar) )
 
     # Fit parameters
-    mean = ROOT.RooRealVar( RootName(), RootName(), 1.,   0.9,    1.1 );
+#    mean = ROOT.RooRealVar( RootName(), RootName(), 1.,   0.7,    1.4 );
+    mean = ROOT.RooRealVar( RootName(), RootName(), 1.,   0.3,    1.4 );
     sig  = ROOT.RooRealVar( RootName(), RootName(), 0.01, 0.0002, 0.8 );
-    a1   = ROOT.RooRealVar( RootName(), RootName(), 3,    0.05,   10 );
-    a2   = ROOT.RooRealVar( RootName(), RootName(), 3,    0.05,   10 );
+    a1   = ROOT.RooRealVar( RootName(), RootName(), 1,    0.05,   10 );
+    a2   = ROOT.RooRealVar( RootName(), RootName(), 2,    0.05,   10 );
     n1   = ROOT.RooRealVar( RootName(), RootName(), 3,    1.01,   500 );
     n2   = ROOT.RooRealVar( RootName(), RootName(), 3,    1.01,   500 );
 
@@ -104,12 +105,16 @@ def FitOneSlice( self, hdata_reduced, histvar, unbinnedFit=False ):
                     ROOT.RooFit.Range(self.fit_x_min, self.fit_x_max),
                     ROOT.RooFit.PrintEvalErrors(-1), ROOT.RooFit.PrintLevel(-1)
                     )
-        mean.setVal(1.0)
-        sig.setVal(0.2*sig.getVal())
+        sig.setVal(0.5*sig.getVal())
         pdfCB.fitTo(hdatahist_fit,
                     ROOT.RooFit.Range(self.fit_x_min, self.fit_x_max),
                     ROOT.RooFit.PrintEvalErrors(-1), ROOT.RooFit.PrintLevel(-1)
                     )
+#        mean.setVal(1.0)
+#        pdfCB.fitTo(hdatahist_fit,
+#                    ROOT.RooFit.Range(self.fit_x_min, self.fit_x_max),
+#                    ROOT.RooFit.PrintEvalErrors(-1), ROOT.RooFit.PrintLevel(-1)
+#                    )
             
 
     # Make a histogram out of the CB function so that effSigma can be calculated

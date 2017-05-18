@@ -76,7 +76,7 @@ def Plot():
                 sliceplot.sliceplotsigma_y_min   = 0.0005
                 sliceplot.sliceplotsigma_y_max   = 0.3005
 
-            if args.large:
+            if args.small:
                 sliceplot.sliceplot_y_min = 0.955
                 sliceplot.sliceplot_y_max = 1.055
 

@@ -10,6 +10,7 @@ Thomas:
 import os
 import argparse
 import pickle
+import math
 
 # Change directory to location of this source file
 execDir = os.path.dirname( os.path.abspath(__file__) )
@@ -199,19 +200,19 @@ def Fit():
     nBinningHistVars = 2000
 
     rawArgList = ROOT.RooArgList( clusrawE, genEnergy )    
-    rawformula = ROOT.RooFormulaVar( 'rawformula', 'raw', '(@0/@1)', rawArgList )
+    rawformula = ROOT.RooFormulaVar( 'rawformula', 'raw', '1+log(@0/@1)', rawArgList )
     rawvar = hdata.addColumn(rawformula)
     rawvar.setRange( 0., 2. )
     rawvar.setBins(nBinningHistVars)
 
     ecor74ArgList = ROOT.RooArgList( cluscorrE, genEnergy )
-    ecor74formula = ROOT.RooFormulaVar( 'ecor74formula', 'corr. (74X)', '(@0/@1)', ecor74ArgList )
+    ecor74formula = ROOT.RooFormulaVar( 'ecor74formula', 'corr. (74X)', '1+log(@0/@1)', ecor74ArgList )
     ecor74var = hdata.addColumn(ecor74formula)
     ecor74var.setRange( 0., 2. )
     ecor74var.setBins(nBinningHistVars)
 
     ecor91ArgList = ROOT.RooArgList( e91X, genEnergy )
-    ecor91formula = ROOT.RooFormulaVar( 'ecor91formula', 'corr. (91X)', '(@0/@1)', ecor91ArgList )
+    ecor91formula = ROOT.RooFormulaVar( 'ecor91formula', 'corr. (91X)', '1+log(@0/@1)', ecor91ArgList )
     ecor91var = hdata.addColumn(ecor91formula)
     ecor91var.setRange( 0., 2. )
     ecor91var.setBins(nBinningHistVars)
@@ -250,7 +251,7 @@ def Fit():
     allPt_bounds += [100.0]
     
     if doZS:
-        allPt_bounds = [ 0.25  + 1.15*i for i in xrange(6) ]
+        allPt_bounds = [ 0.25, 0.5, 1.0, 1.5, 2.5, 6.0 ]
     
     print allPt_bounds
     print globalPt_bounds
@@ -303,9 +304,9 @@ def Fit():
 
         if doZS:
             if dobarrel:
-                genEta_bounds = [ 0.0 + 0.3*i for i in xrange(6) ]
+                genEta_bounds = [ 0.0 + 0.15*i for i in xrange(11) ]
             else:
-                genEta_bounds = [ 1.4 + 0.22*i for i in xrange(6) ]
+                genEta_bounds = [ 1.4 + 0.11*i for i in xrange(11) ]
 
         genEta_name = 'GENETA-{0:04d}-{1:04d}'.format( int(min_globalPt), int(max_globalPt) )
         genEta_sliceplot = SlicePlot(

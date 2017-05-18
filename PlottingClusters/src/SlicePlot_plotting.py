@@ -86,7 +86,7 @@ def MakePlots_standard( self ):
             H.SetTitleSize(0.06);
 
             H.GetXaxis().SetTitle( histvartitle )
-            H.GetXaxis().SetRangeUser( 0.7, 1.2 );
+            H.GetXaxis().SetRangeUser( 0.3, 1.4 );
 
             H.GetXaxis().SetLabelSize(0.05);
             H.GetXaxis().SetTitleSize(0.06);

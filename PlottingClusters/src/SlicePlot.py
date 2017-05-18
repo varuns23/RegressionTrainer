@@ -35,8 +35,9 @@ class SlicePlot:
         self.pickledir = 'FitPickles'
 
 
-        self.fit_x_min = 0.8
-        self.fit_x_max = 1.1
+#        self.fit_x_min = 0.7
+        self.fit_x_min = 0.3
+        self.fit_x_max = 1.4
 
         self.Verbosity = 10
 
@@ -114,8 +115,5 @@ SlicePlot.FitOneSlice = FitOneSlice
 
 from SlicePlot_plotting import *
 SlicePlot.MakePlots_standard = MakePlots_standard
-
-from SlicePlot_compareTRK import *
-SlicePlot.MakePlots_comparison = MakePlots_comparison
 
 
