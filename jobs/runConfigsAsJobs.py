@@ -120,7 +120,7 @@ def Make_jobscript( cfg, jobscriptDir, stdDir ):
     # Going into right directory
     p( 'cd {0}/src'.format( os.path.abspath( os.environ['CMSSW_BASE'] ) ) )
     p( 'eval `scramv1 runtime -sh`' )
-    p( 'cd RegressionTraining' )
+    p( 'cd RegressionTrainer' )
 
     p( '#' + '-'*50 )
     p( 'echo "START OF RUN FOR {0}"'.format(cfg) )
