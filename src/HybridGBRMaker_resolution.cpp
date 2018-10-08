@@ -58,7 +58,6 @@ HybridGBRMaker::HybridGBRMaker():
     m_weight(""),
     m_doCombine(true),
     m_doEB(true),
-    m_doPerfectResponse(false),
     //m_trainerEBVar(NULL),
     //m_trainerEE(NULL),
     //m_trainerEEVar(NULL),
@@ -131,7 +130,6 @@ bool HybridGBRMaker::init(const string& name,
                            const string& outputDirectory,
                            bool doCombine,
 			   bool doEB,
-			   bool doPerfectResponse,
 			   float scaleMin,
 			   float scaleMax
                            )
@@ -141,7 +139,6 @@ bool HybridGBRMaker::init(const string& name,
     m_name = name;
     m_doCombine = doCombine;
     m_doEB      = doEB;
-    m_doPerfectResponse = doPerfectResponse;
     m_scaleMin  = scaleMin;
     m_scaleMax  = scaleMax;
 
@@ -285,13 +282,8 @@ void HybridGBRMaker::runEB(const string& cutBase, const string& cutEB, const str
     //add target to full list
     varsEB.addOwned(*targetvar);
 
-    RooRealVar* perfect_response;
-    if (m_doPerfectResponse) {
-      std::cout << "RCLSA -- using perfect response" << std::endl;
-      perfect_response = new RooRealVar("perfect_response", "response", 0.);
-      perfect_response->setConstant(false); 
-      varsEB.addOwned(*perfect_response);
-    }
+    RooRealVar* perfect_response = new RooRealVar("perfect_response", "response", 0.);
+    varsEB.addOwned(*perfect_response);
 
     // retrieve event weight
     // loop over options
@@ -328,13 +320,12 @@ void HybridGBRMaker::runEB(const string& cutBase, const string& cutEB, const str
 
     //create RooDataSet from TChain
     RooDataSet *hdataEB = RooTreeConvert::CreateDataSet("hdataEB", m_tree, varsEB, weightvarEB);   
-    //cout << "VS: number of entries " << hdataEB->numEntries() << endl;
+
     //RooRealVars corresponding to regressed parameters (sigma, mean, left tail parameter, right tail parameter)
     RooRealVar sigwidthtvarEB("sigwidthtvarEB","",0.01);
     sigwidthtvarEB.setConstant(false);
 
-    RooRealVar sigmeantvarEB("sigmeantvarEB","",0.05); //Try-VS-18/07/2018
-    //RooRealVar sigmeantvarEB("sigmeantvarEB","",1.);
+    RooRealVar sigmeantvarEB("sigmeantvarEB","",1.);
     sigmeantvarEB.setConstant(false); 
 
     RooRealVar signvarEB("signvarEB","",3.);
@@ -374,13 +365,8 @@ void HybridGBRMaker::runEB(const string& cutBase, const string& cutEB, const str
     RooRealConstraint sigwidthlimEB("sigwidthlimEB","",*sigwidthtEB,0.0002,0.5);
     
     // RooRealConstraint sigmeanlimEB("sigmeanlimEB","",*sigmeantEB,0.2,2.0);
-    RooRealConstraint* sigmeanlimEB;
-    if (!m_doPerfectResponse) {
-      sigmeanlimEB = new RooRealConstraint("sigmeanlimEB","",*sigmeantEB,m_scaleMin,m_scaleMax);
-    } else {
-      perfect_response->setVal(1.0);
-      sigmeanlimEB = new RooRealConstraint("sigmeanlimEB","",*perfect_response,m_scaleMin,m_scaleMax);
-    }
+    //    RooRealConstraint sigmeanlimEB("sigmeanlimEB","",*sigmeantEB,m_scaleMin,m_scaleMax);
+    RooRealConstraint sigmeanlimEB("sigmeanlimEB","",*perfect_response,m_scaleMin,m_scaleMax);
 
     RooRealConstraint signlimEB("signlimEB","",*signtEB,1.01,5000.); 
     RooRealConstraint sign2limEB("sign2limEB","",*sign2tEB,1.01,5000.); 
@@ -389,7 +375,12 @@ void HybridGBRMaker::runEB(const string& cutBase, const string& cutEB, const str
     //regression inputs in this case)
     //The actual pdf below is a double crystal ball, with crossover points alpha_1 and alpha_2 set constant, but all other
     //parameters regressed
-    RooDoubleCBFast sigpdfEB("sigpdfEB","",*targetvar,*sigmeanlimEB,sigwidthlimEB,RooConst(2.),signlimEB,RooConst(1.),sign2limEB);
+
+    double oldval = var->getVal();
+    double newval = asin(2.0*(oldval-_low)/(_high-_low)-1.0);
+
+
+    RooDoubleCBFast sigpdfEB("sigpdfEB","",*targetvar,sigmeanlimEB,sigwidthlimEB,RooConst(2.),signlimEB,RooConst(1.),sign2limEB);
 
     //dummy variable
     RooConstVar etermconst("etermconst","",0.);  
@@ -556,13 +547,6 @@ void HybridGBRMaker::runEE(const string& cutBase, const string& cutEE, const str
     //add target to full list
     varsEE.addOwned(*targetvar);
 
-    RooRealVar* perfect_response;
-    if (m_doPerfectResponse) {
-      perfect_response = new RooRealVar("perfect_response", "response", 0.);
-      perfect_response->setConstant(false); 
-      varsEE.addOwned(*perfect_response);
-    }
-
     // retrieve event weight
     // loop over options
     vector<string> optionTokens;
@@ -595,13 +579,12 @@ void HybridGBRMaker::runEE(const string& cutBase, const string& cutEE, const str
 
     //create RooDataSet from TChain
     RooDataSet *hdataEE = RooTreeConvert::CreateDataSet("hdataEE", m_tree, varsEE, weightvarEE);   
-    //cout << "VS: number of entries " << hdataEE->numEntries() << endl;
+
     //RooRealVars corresponding to regressed parameters (sigma, mean, left tail parameter, right tail parameter)
     RooRealVar sigwidthtvarEE("sigwidthtvarEE","",0.01);
     sigwidthtvarEE.setConstant(false);
 
-    RooRealVar sigmeantvarEE("sigmeantvarEE","",0.05); //Try-VS-18/07/2018
-    //RooRealVar sigmeantvarEE("sigmeantvarEE","",1.);
+    RooRealVar sigmeantvarEE("sigmeantvarEE","",1.);
     sigmeantvarEE.setConstant(false); 
 
     RooRealVar signvarEE("signvarEE","",3.);
@@ -639,13 +622,8 @@ void HybridGBRMaker::runEE(const string& cutBase, const string& cutEE, const str
 
     //define transformations corresponding to parameter bounds for non-parametric outputs  
     RooRealConstraint sigwidthlimEE("sigwidthlimEE","",*sigwidthtEE,0.0002,0.5);
-    RooRealConstraint* sigmeanlimEE;
-    if (!m_doPerfectResponse) {
-      sigmeanlimEE = new RooRealConstraint("sigmeanlimEE","",*sigmeantEE,m_scaleMin,m_scaleMax);
-    } else {
-      perfect_response->setVal(1.0);
-      sigmeanlimEE = new RooRealConstraint("sigmeanlimEE","",*perfect_response,m_scaleMin,m_scaleMax);
-    }
+    //    RooRealConstraint sigmeanlimEE("sigmeanlimEE","",*sigmeantEE,m_scaleMin,m_scaleMax); // THOMAS: Up from 0.2 to 2.0
+    RooRealConstraint sigmeanlimEE("sigmeanlimEE","",*perfect_response,m_scaleMin,m_scaleMax); // THOMAS: Up from 0.2 to 2.0
     RooRealConstraint signlimEE("signlimEE","",*signtEE,1.01,5000.); 
     RooRealConstraint sign2limEE("sign2limEE","",*sign2tEE,1.01,5000.); 
 
@@ -653,7 +631,7 @@ void HybridGBRMaker::runEE(const string& cutBase, const string& cutEE, const str
     //regression inputs in this case)
     //The actual pdf below is a double crystal ball, with crossover points alpha_1 and alpha_2 set constant, but all other
     //parameters regressed
-    RooDoubleCBFast sigpdfEE("sigpdfEE","",*targetvar,*sigmeanlimEE,sigwidthlimEE,RooConst(2.),signlimEE,RooConst(1.),sign2limEE);
+    RooDoubleCBFast sigpdfEE("sigpdfEE","",*targetvar,sigmeanlimEE,sigwidthlimEE,RooConst(2.),signlimEE,RooConst(1.),sign2limEE);
 
     //dummy variable
     RooConstVar etermconst("etermconst","",0.);  

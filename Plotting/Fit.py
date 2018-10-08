@@ -64,7 +64,7 @@ def Fit():
     ########################################
 
     parser = argparse.ArgumentParser()
-    parser.add_argument( '--particle', type=str, default='TODO', choices=[ 'electron', 'photon', 'TODO' ] )
+    parser.add_argument( '--particle', type=str, default='TODO', choices=[ 'electron', 'photon', 'cluster', 'TODO' ] )
     parser.add_argument( '--region', type=str, default='TODO', choices=[ 'EB', 'EE', 'TODO' ] )
     parser.add_argument( '--testrun', action='store_true', help='selects only a few events for testing purposes')
 
@@ -136,6 +136,7 @@ def Fit():
     trkEta            = ROOT.RooRealVar( "trkEta",               "trkEta", 0.)
     trkPhi            = ROOT.RooRealVar( "trkPhi",               "trkPhi", 0.)
     fbrem             = ROOT.RooRealVar( "fbrem",                "fbrem", 0.)
+    e90xECALonly          = ROOT.RooRealVar( "e90xECALonly",             "e90xECALonly", 0.)
     response          = ROOT.RooRealVar( "response",             "response", 0.)
     resolution        = ROOT.RooRealVar( "resolution",           "resolution", 0.)
     response2         = ROOT.RooRealVar( "response2",             "response2", 0.)
@@ -174,6 +175,7 @@ def Fit():
         cor74Eerror,
         response,
         resolution,
+        e90xECALonly
         ]
 
     if ecaltrk:
@@ -241,17 +243,17 @@ def Fit():
     rawvar.setBins(nBinningHistVars)
 
     ecor74ArgList = ROOT.RooArgList( cor74E, genE )
-    ecor74formula = ROOT.RooFormulaVar( 'ecor74formula', 'corr. (ECAL 74X)', '(@0/@1)', ecor74ArgList )
+    ecor74formula = ROOT.RooFormulaVar( 'ecor74formula', 'corr. (ECAL 80X)', '(@0/@1)', ecor74ArgList )
     ecor74var = hdata.addColumn(ecor74formula)
     ecor74var.setRange( 0., 2. )
     ecor74var.setBins(nBinningHistVars)
 
     if not args.second_regression:
         # ecor uses target
-        ecorArgList = ROOT.RooArgList( response, rawEnergy, preshowerEnergy, genE )
+        ecorArgList = ROOT.RooArgList( e90xECALonly, genE )
         ecorformula = ROOT.RooFormulaVar(
             'ecorformula', 'corr. (ECAL)',
-            '(response * ((rawEnergy+preshowerEnergy)/genEnergy))',
+            '(e90xECALonly/genEnergy)',
             ecorArgList
             )
 
@@ -262,10 +264,10 @@ def Fit():
     elif args.second_regression:
         # distinguish between corrected ECAL and corrected 2step
         
-        ecalCorrArgList = ROOT.RooArgList( response, rawEnergy, preshowerEnergy, genE )
+        ecalCorrArgList = ROOT.RooArgList( e90xECALonly, genE )
         ecalCorrFormula = ROOT.RooFormulaVar(
             'ecalCorrFormula', 'corr. (ECAL)',
-            '(@0 * ((@1+@2)/@3))',
+            '(@0/@1))',
             ecalCorrArgList
             )
         ecalCorrVar = hdata.addColumn(ecalCorrFormula)

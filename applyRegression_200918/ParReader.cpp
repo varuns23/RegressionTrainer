@@ -90,9 +90,7 @@ bool ParReader::read(const string& parFileName)
        stringstream keyDoCombine;
 
        stringstream keyDoEB;
-       stringstream keyDoPerfectResponse;
-       stringstream keyScaleMin;
-       stringstream keyScaleMax;
+
 
        keyInputFiles           <<  baseName  <<  "."  <<  i  <<  ".InputFiles";
        keyTree                 <<  baseName  <<  "."  <<  i  <<  ".Tree";
@@ -115,9 +113,6 @@ bool ParReader::read(const string& parFileName)
        keyDoCombine            <<  baseName  <<  "."  <<  i  <<  ".DoCombine";
 
        keyDoEB                 <<  baseName  <<  "."  <<  i  <<  ".DoEB";
-       keyDoPerfectResponse    <<  baseName  <<  "."  <<  i  <<  ".DoPerfectResponse";
-       keyScaleMin             <<  baseName  <<  "."  <<  i  <<  ".ScaleMin";
-       keyScaleMax             <<  baseName  <<  "."  <<  i  <<  ".ScaleMax";
 
 
        RegressionParameters par;
@@ -142,9 +137,6 @@ bool ParReader::read(const string& parFileName)
        par.doCombine           =        params.GetValue(keyDoCombine.str().c_str(),          false);
 
        par.doEB                =        params.GetValue(keyDoEB.str().c_str(),               true);
-       par.doPerfectResponse   =        params.GetValue(keyDoPerfectResponse.str().c_str(),  false);
-       par.scaleMin            =        params.GetValue(keyScaleMin.str().c_str(),            0.2);
-       par.scaleMax            =        params.GetValue(keyScaleMax.str().c_str(),            2.1);
 
        m_regParams.push_back(par);
 

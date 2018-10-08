@@ -1,0 +1,1 @@
+./applyRegression.exe -r EB -c ../python/scaleElectron/electron -p /hdfs/store/user/varuns/EgammaRegression/94X/output/electron/electron -t /hdfs/store/user/varuns/EgammaRegression/94X/Electron/realIC-EB-testing.root -o realIC-EB-application.root

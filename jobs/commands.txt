@@ -1,0 +1,1 @@
+python ./runConfigsAsJobs.py -q 2nw -c ../python/*May8*config

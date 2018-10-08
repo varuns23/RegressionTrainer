@@ -1,0 +1,18 @@
+x509userproxy        = /tmp/x509up_u4549
+use_x509userproxy    = True
+universe             = vanilla
+Executable           = Job_electron_EE_ecal_lowpt_v2.sh
+Notification         = never
+WhenToTransferOutput = On_Exit
+ShouldTransferFiles  = yes
+Requirements = (TARGET.UidDomain == "hep.wisc.edu" && TARGET.HAS_CMS_HDFS)
+on_exit_remove       = (ExitBySignal == FALSE && (ExitCode == 0 || ExitCode == 42 || NumJobStarts>3))
++IsFastQueueJob      = True
+getenv               = true
+request_memory       = 4096
+request_disk         = 4096000
+Transfer_Input_Files = regression.exe, electron_EE_ecal_lowpt.config
+output               = /nfs_scratch/varuns/testCondor/$(Cluster)_$(Process)_electron_EE_ecal_lowpt_v2.out
+error                = /nfs_scratch/varuns/testCondor/$(Cluster)_$(Process)_electron_EE_ecal_lowpt_v2.err
+Log                  = /nfs_scratch/varuns/testCondor/$(Cluster)_$(Process)_electron_EE_ecal_lowpt_v2.log
+Queue

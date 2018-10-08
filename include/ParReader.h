@@ -47,6 +47,7 @@ struct RegressionParameters
     bool        doCombine;
 
     bool        doEB;
+    bool        doPerfectResponse;
     float       scaleMin;
     float       scaleMax;
 

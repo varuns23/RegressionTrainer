@@ -49,6 +49,7 @@ class HybridGBRMaker
                   const std::string& outputDirectory,
                   bool doCombine,
                   bool doEB,
+		  bool doPerfectResponse,
 		  float scaleMin,
 		  float scaleMax
                   );
@@ -78,6 +79,8 @@ class HybridGBRMaker
 
         bool m_doCombine;
         bool m_doEB;
+	bool m_doPerfectResponse;
+	
 
         GBRTrainer* m_trainerComb;
         GBRForestD* m_forestEBmean;

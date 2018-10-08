@@ -1,0 +1,2 @@
+./MakeCondorFiles.sh regression.exe Config_photon_EE_ecal_lowpt.config Config_photon_EE_ecal_lowpt
+./MakeCondorFiles.sh regression.exe Config_electron_EE_ecal_lowpt.config Config_electron_EE_ecal_lowpt

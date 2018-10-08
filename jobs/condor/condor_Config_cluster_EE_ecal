@@ -1,0 +1,18 @@
+x509userproxy        = /tmp/x509up_u4549
+use_x509userproxy    = True
+universe             = vanilla
+Executable           = Job_Config_cluster_EE_ecal.sh
+Notification         = never
+WhenToTransferOutput = On_Exit
+ShouldTransferFiles  = yes
+Requirements = (TARGET.UidDomain == "hep.wisc.edu" && TARGET.HAS_CMS_HDFS)
+on_exit_remove       = (ExitBySignal == FALSE && (ExitCode == 0 || ExitCode == 42 || NumJobStarts>3))
++IsFastQueueJob      = True
+getenv               = true
+request_memory       = 1992
+request_disk         = 2048000
+Transfer_Input_Files = regression.exe, Config_cluster_EE_ecal.config
+output               = /nfs_scratch/varuns/testCondor/$(Cluster)_$(Process)_Config_cluster_EE_ecal.out
+error                = /nfs_scratch/varuns/testCondor/$(Cluster)_$(Process)_Config_cluster_EE_ecal.err
+Log                  = /nfs_scratch/varuns/testCondor/$(Cluster)_$(Process)_Config_cluster_EE_ecal.log
+Queue

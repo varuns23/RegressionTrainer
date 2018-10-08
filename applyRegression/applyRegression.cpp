@@ -27,7 +27,7 @@ using namespace boost;
 using namespace boost::program_options;
 using namespace boost::filesystem;
 
-#define debug false
+#define debug true
 #define debug2 false
 #define testing false
 
@@ -59,6 +59,7 @@ int main(int argc, char** argv) {
     ("testing,t", value<string>(&testingFileName), "Testing tree")
     ("output,o", value<string>(&outputFileName), "Output friend tree")
     ("gsf,g", "Do GSF track regression")
+    ("sat,s", "Do not apply saturation regression")
     ("zero,z", value<string>(&supressVariable), "Force variable to zero (for sensitivity studies)")
     ;
 
@@ -75,54 +76,56 @@ int main(int argc, char** argv) {
   if (vm.count("gsf")) {
     doGSF = true;
   }
+  bool applySat = true;
+  if (vm.count("sat")) {
+    applySat = false;
+  }
 
   if (!vm.count("config")) {
     configPrefix = trainingPrefix;
     replace(configPrefix, "../", "../python/");
   }
 
-  double responseMin = 0.5 ;
-  double responseMax = 2.1 ;
+  double responseMin = 0.7 ;
+  double responseMax = 1.7 ;
   double resolutionMin = 0.0002 ;
   double resolutionMax = 0.5 ;
+
+  double responseMin_sat = -1.0 ;
+  double responseMax_sat = 3.0 ;
 
   cout << "Response parameters "  << responseMin << " " << responseMax << endl;
 
   double responseScale = 0.5*( responseMax - responseMin );
   double responseOffset = responseMin + 0.5*( responseMax - responseMin );
 
+  double responseScale_sat = 0.5*( responseMax_sat - responseMin_sat );
+  double responseOffset_sat = responseMin_sat + 0.5*( responseMax_sat - responseMin_sat );
+
   double resolutionScale = 0.5*( resolutionMax - resolutionMin );
   double resolutionOffset = resolutionMin + 0.5*( resolutionMax - resolutionMin );
 
   GBRForestD* forest_EB_ecal_single_lowpt_scale;
-  GBRForestD* forest_EB_ecal_single_medpt_scale;
   GBRForestD* forest_EB_ecal_single_highpt_scale;
   GBRForestD* forest_EB_ecal_mult_lowpt_scale;
-  GBRForestD* forest_EB_ecal_mult_medpt_scale;
   GBRForestD* forest_EB_ecal_mult_highpt_scale;
   GBRForestD* forest_EB_ecal_sat_scale;
 
   GBRForestD* forest_EE_ecal_single_lowpt_scale;
-  GBRForestD* forest_EE_ecal_single_medpt_scale;
   GBRForestD* forest_EE_ecal_single_highpt_scale;
   GBRForestD* forest_EE_ecal_mult_lowpt_scale;
-  GBRForestD* forest_EE_ecal_mult_medpt_scale;
   GBRForestD* forest_EE_ecal_mult_highpt_scale;
   GBRForestD* forest_EE_ecal_sat_scale;
 
   GBRForestD* forest_EB_ecal_single_lowpt_resolution;
-  GBRForestD* forest_EB_ecal_single_medpt_resolution;
   GBRForestD* forest_EB_ecal_single_highpt_resolution;
   GBRForestD* forest_EB_ecal_mult_lowpt_resolution;
-  GBRForestD* forest_EB_ecal_mult_medpt_resolution;
   GBRForestD* forest_EB_ecal_mult_highpt_resolution;
   GBRForestD* forest_EB_ecal_sat_resolution;
 
   GBRForestD* forest_EE_ecal_single_lowpt_resolution;
-  GBRForestD* forest_EE_ecal_single_medpt_resolution;
   GBRForestD* forest_EE_ecal_single_highpt_resolution;
   GBRForestD* forest_EE_ecal_mult_lowpt_resolution;
-  GBRForestD* forest_EE_ecal_mult_medpt_resolution;
   GBRForestD* forest_EE_ecal_mult_highpt_resolution;
   GBRForestD* forest_EE_ecal_sat_resolution;
 
@@ -143,18 +146,12 @@ int main(int argc, char** argv) {
     file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_single_lowpt_results.root", trainingPrefix.c_str())));  
     forest_EB_ecal_single_lowpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
     forest_EB_ecal_single_lowpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
-    file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_single_medpt_results.root", trainingPrefix.c_str())));  
-    forest_EB_ecal_single_medpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
-    forest_EB_ecal_single_medpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
     file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_single_highpt_results.root", trainingPrefix.c_str())));  
     forest_EB_ecal_single_highpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
     forest_EB_ecal_single_highpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
     file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_mult_lowpt_results.root", trainingPrefix.c_str())));  
     forest_EB_ecal_mult_lowpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
     forest_EB_ecal_mult_lowpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
-    file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_mult_medpt_results.root", trainingPrefix.c_str())));  
-    forest_EB_ecal_mult_medpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
-    forest_EB_ecal_mult_medpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
     file_.push_back(TFile::Open(TString::Format("%s_EB_ecal_mult_highpt_results.root", trainingPrefix.c_str())));  
     forest_EB_ecal_mult_highpt_scale = (GBRForestD*) file_.back()->Get("EBCorrection");
     forest_EB_ecal_mult_highpt_resolution = (GBRForestD*) file_.back()->Get("EBUncertainty");
@@ -165,18 +162,12 @@ int main(int argc, char** argv) {
     file_.push_back(TFile::Open(TString::Format("%s_EE_ecal_single_lowpt_results.root", trainingPrefix.c_str())));  
     forest_EE_ecal_single_lowpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
     forest_EE_ecal_single_lowpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
-    file_.push_back(TFile::Open(TString::Format("%s_EE_ecal_single_medpt_results.root", trainingPrefix.c_str())));  
-    forest_EE_ecal_single_medpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
-    forest_EE_ecal_single_medpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
     file_.push_back(TFile::Open(TString::Format("%s_EE_ecal_single_highpt_results.root", trainingPrefix.c_str())));  
     forest_EE_ecal_single_highpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
     forest_EE_ecal_single_highpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
     file_.push_back(TFile::Open(TString::Format("%s_EE_ecal_mult_lowpt_results.root", trainingPrefix.c_str())));  
     forest_EE_ecal_mult_lowpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
     forest_EE_ecal_mult_lowpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
-    file_.push_back(TFile::Open(TString::Format("%s_EE_ecal_mult_medpt_results.root", trainingPrefix.c_str())));  
-    forest_EE_ecal_mult_medpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
-    forest_EE_ecal_mult_medpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
     file_.push_back(TFile::Open(TString::Format("%s_EE_ecal_mult_highpt_results.root", trainingPrefix.c_str())));  
     forest_EE_ecal_mult_highpt_scale = (GBRForestD*) file_.back()->Get("EECorrection");
     forest_EE_ecal_mult_highpt_resolution = (GBRForestD*) file_.back()->Get("EEUncertainty");
@@ -215,18 +206,14 @@ int main(int argc, char** argv) {
   }
 
   ParReader reader_EB_ecal_single_lowpt; reader_EB_ecal_single_lowpt.read(TString::Format("%s_EB_ecal_single_lowpt.config", configPrefix.c_str()).Data());
-  ParReader reader_EB_ecal_single_medpt; reader_EB_ecal_single_medpt.read(TString::Format("%s_EB_ecal_single_medpt.config", configPrefix.c_str()).Data());
   ParReader reader_EB_ecal_single_highpt; reader_EB_ecal_single_highpt.read(TString::Format("%s_EB_ecal_single_highpt.config", configPrefix.c_str()).Data());
   ParReader reader_EB_ecal_mult_lowpt; reader_EB_ecal_mult_lowpt.read(TString::Format("%s_EB_ecal_mult_lowpt.config", configPrefix.c_str()).Data());
-  ParReader reader_EB_ecal_mult_medpt; reader_EB_ecal_mult_medpt.read(TString::Format("%s_EB_ecal_mult_medpt.config", configPrefix.c_str()).Data());
   ParReader reader_EB_ecal_mult_highpt; reader_EB_ecal_mult_highpt.read(TString::Format("%s_EB_ecal_mult_highpt.config", configPrefix.c_str()).Data());
   ParReader reader_EB_ecal_sat; reader_EB_ecal_sat.read(TString::Format("%s_EB_ecal_sat.config", configPrefix.c_str()).Data());
 
   ParReader reader_EE_ecal_single_lowpt; reader_EE_ecal_single_lowpt.read(TString::Format("%s_EE_ecal_single_lowpt.config", configPrefix.c_str()).Data());
-  ParReader reader_EE_ecal_single_medpt; reader_EE_ecal_single_medpt.read(TString::Format("%s_EE_ecal_single_medpt.config", configPrefix.c_str()).Data());
   ParReader reader_EE_ecal_single_highpt; reader_EE_ecal_single_highpt.read(TString::Format("%s_EE_ecal_single_highpt.config", configPrefix.c_str()).Data());
   ParReader reader_EE_ecal_mult_lowpt; reader_EE_ecal_mult_lowpt.read(TString::Format("%s_EE_ecal_mult_lowpt.config", configPrefix.c_str()).Data());
-  ParReader reader_EE_ecal_mult_medpt; reader_EE_ecal_mult_medpt.read(TString::Format("%s_EE_ecal_mult_medpt.config", configPrefix.c_str()).Data());
   ParReader reader_EE_ecal_mult_highpt; reader_EE_ecal_mult_highpt.read(TString::Format("%s_EE_ecal_mult_highpt.config", configPrefix.c_str()).Data());
   ParReader reader_EE_ecal_sat; reader_EE_ecal_sat.read(TString::Format("%s_EE_ecal_sat.config", configPrefix.c_str()).Data());
 
@@ -253,28 +240,20 @@ int main(int argc, char** argv) {
   char_separator<char> sep(":");
   std::vector<TTreeFormula*> inputforms_EB_ecal_single_lowpt;
   { tokenizer<char_separator<char>> tokens(reader_EB_ecal_single_lowpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_single_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
-  std::vector<TTreeFormula*> inputforms_EB_ecal_single_medpt;
-  { tokenizer<char_separator<char>> tokens(reader_EB_ecal_single_medpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_single_medpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
   std::vector<TTreeFormula*> inputforms_EB_ecal_single_highpt;
   { tokenizer<char_separator<char>> tokens(reader_EB_ecal_single_highpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_single_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
   std::vector<TTreeFormula*> inputforms_EB_ecal_mult_lowpt;
   { tokenizer<char_separator<char>> tokens(reader_EB_ecal_mult_lowpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_mult_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
-  std::vector<TTreeFormula*> inputforms_EB_ecal_mult_medpt;
-  { tokenizer<char_separator<char>> tokens(reader_EB_ecal_mult_medpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_mult_medpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
   std::vector<TTreeFormula*> inputforms_EB_ecal_mult_highpt;
   { tokenizer<char_separator<char>> tokens(reader_EB_ecal_mult_highpt.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_mult_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
   std::vector<TTreeFormula*> inputforms_EB_ecal_sat;
   { tokenizer<char_separator<char>> tokens(reader_EB_ecal_sat.m_regParams[0].variablesEB, sep); for (const auto& it : tokens) inputforms_EB_ecal_sat.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
   std::vector<TTreeFormula*> inputforms_EE_ecal_single_lowpt;
   { tokenizer<char_separator<char>> tokens(reader_EE_ecal_single_lowpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_single_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
-  std::vector<TTreeFormula*> inputforms_EE_ecal_single_medpt;
-  { tokenizer<char_separator<char>> tokens(reader_EE_ecal_single_medpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_single_medpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
   std::vector<TTreeFormula*> inputforms_EE_ecal_single_highpt;
   { tokenizer<char_separator<char>> tokens(reader_EE_ecal_single_highpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_single_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
   std::vector<TTreeFormula*> inputforms_EE_ecal_mult_lowpt;
   { tokenizer<char_separator<char>> tokens(reader_EE_ecal_mult_lowpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_mult_lowpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
-  std::vector<TTreeFormula*> inputforms_EE_ecal_mult_medpt;
-  { tokenizer<char_separator<char>> tokens(reader_EE_ecal_mult_medpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_mult_medpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
   std::vector<TTreeFormula*> inputforms_EE_ecal_mult_highpt;
   { tokenizer<char_separator<char>> tokens(reader_EE_ecal_mult_highpt.m_regParams[0].variablesEE, sep); for (const auto& it : tokens) inputforms_EE_ecal_mult_highpt.push_back(new TTreeFormula(it.c_str(),it.c_str(),testingTree)); }
   std::vector<TTreeFormula*> inputforms_EE_ecal_sat;
@@ -318,59 +297,50 @@ int main(int argc, char** argv) {
     if (iev%100000==0) printf("%i\n",int(iev));
     testingTree->LoadTree(iev);
 
+    bool EB_ = isEB.EvalInstance();
+    bool EE_ = !EB_;
+    bool sat_ = nrSaturatedCrysIn5x5.EvalInstance() > 0;
+    
     if (!doGSF) {
-      bool EB_ = isEB.EvalInstance();
-      bool EE_ = !EB_;
       bool low_ = genPt.EvalInstance() < 300.;
-      bool med_ = genPt.EvalInstance() >= 300. && genPt.EvalInstance() < 1000.;
-      bool high_ = genPt.EvalInstance() >= 1000.;
+      bool high_ = genPt.EvalInstance() >= 300.;
       bool single_ = numberOfClusters.EvalInstance() == 1;
       bool mult_ = !single_;
-      bool sat_ = nrSaturatedCrysIn5x5.EvalInstance() > 0;
       vals.clear();
-
+      
       if (debug) {
 	cout << "EB: " << EB_ << endl
 	     << "EE: " << EE_ << endl
 	     << "low: " << low_ << endl
-	     << "med: " << med_ << endl
 	     << "high: " << high_ << endl
 	     << "single: " << single_ << endl
 	     << "mult: " << mult_ << endl
 	     << "sat: " << sat_ << endl;
       }
-
+    
       if (EB_ && low_ && single_ && !sat_) { for (auto&& input : inputforms_EB_ecal_single_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
 	response = forest_EB_ecal_single_lowpt_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_single_lowpt_resolution->GetResponse(vals.data()); }
-      else if (EB_ && med_ && single_ && !sat_) { for (auto&& input : inputforms_EB_ecal_single_medpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
-	response = forest_EB_ecal_single_medpt_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_single_medpt_resolution->GetResponse(vals.data()); }
       else if (EB_ && high_ && single_ && !sat_) { for (auto&& input : inputforms_EB_ecal_single_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
 	response = forest_EB_ecal_single_highpt_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_single_highpt_resolution->GetResponse(vals.data()); }
       else if (EB_ && low_ && mult_ && !sat_) { for (auto&& input : inputforms_EB_ecal_mult_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
 	response = forest_EB_ecal_mult_lowpt_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_mult_lowpt_resolution->GetResponse(vals.data()); }
-      else if (EB_ && med_ && mult_ && !sat_) { for (auto&& input : inputforms_EB_ecal_mult_medpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
-	response = forest_EB_ecal_mult_medpt_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_mult_medpt_resolution->GetResponse(vals.data()); }
       else if (EB_ && high_ && mult_ && !sat_) { for (auto&& input : inputforms_EB_ecal_mult_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
 	response = forest_EB_ecal_mult_highpt_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_mult_highpt_resolution->GetResponse(vals.data()); }
-      else if (EB_ && sat_) { for (auto&& input : inputforms_EB_ecal_sat) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
-	response = forest_EB_ecal_sat_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_sat_resolution->GetResponse(vals.data()); }
       else if (EE_ && low_ && single_ && !sat_) { for (auto&& input : inputforms_EE_ecal_single_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
 	response = forest_EE_ecal_single_lowpt_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_single_lowpt_resolution->GetResponse(vals.data()); }
-      else if (EE_ && med_ && single_ && !sat_) { for (auto&& input : inputforms_EE_ecal_single_medpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
-	response = forest_EE_ecal_single_medpt_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_single_medpt_resolution->GetResponse(vals.data()); }
       else if (EE_ && high_ && single_ && !sat_) { for (auto&& input : inputforms_EE_ecal_single_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
 	response = forest_EE_ecal_single_highpt_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_single_highpt_resolution->GetResponse(vals.data()); }
       else if (EE_ && low_ && mult_ && !sat_) { for (auto&& input : inputforms_EE_ecal_mult_lowpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
 	response = forest_EE_ecal_mult_lowpt_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_mult_lowpt_resolution->GetResponse(vals.data()); }
-      else if (EE_ && med_ && mult_ && !sat_) { for (auto&& input : inputforms_EE_ecal_mult_medpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
-	response = forest_EE_ecal_mult_medpt_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_mult_medpt_resolution->GetResponse(vals.data()); }
       else if (EE_ && high_ && mult_ && !sat_) { for (auto&& input : inputforms_EE_ecal_mult_highpt) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
 	response = forest_EE_ecal_mult_highpt_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_mult_highpt_resolution->GetResponse(vals.data()); }
+      else if (EB_ && sat_) { for (auto&& input : inputforms_EB_ecal_sat) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
+	response = forest_EB_ecal_sat_scale->GetResponse(vals.data()); resolution = forest_EB_ecal_sat_resolution->GetResponse(vals.data()); if (debug) cout << "I am here"<< endl;}
       else if (EE_ && sat_) { for (auto&& input : inputforms_EE_ecal_sat) { input->GetNdata(); vals.push_back(input->EvalInstance()); if(debug) cout << input->GetExpFormula().Data() << " " << input->EvalInstance() << endl; } 
 	response = forest_EE_ecal_sat_scale->GetResponse(vals.data()); resolution = forest_EE_ecal_sat_resolution->GetResponse(vals.data()); }
+      
+
     } else {
-      bool EB_ = isEB.EvalInstance();
-      bool EE_ = !EB_;
       bool low_ = genPt.EvalInstance() < 50.;
       bool high_ = !low_;
       vals.clear();
@@ -386,12 +356,11 @@ int main(int argc, char** argv) {
 	response = forest_EE_trk_highpt_scale->GetResponse(vals.data()); resolution = forest_EE_trk_highpt_resolution->GetResponse(vals.data()); }
 
     }
+    
+    if (debug) cout << "raw response " << response << endl << "raw resolution " << resolution << endl;
 
-    if (TMath::Abs(response) > TMath::Pi()/2 ) response = 1.0;
-    else response = responseOffset + responseScale*sin(response);
-
-    if (TMath::Abs(resolution) > TMath::Pi()/2 ) resolution = 1.0;
-    else resolution = resolutionOffset + resolutionScale*sin(resolution);
+    response = sat_? responseOffset_sat + responseScale_sat*sin(response) : responseOffset + responseScale*sin(response);
+    resolution = resolutionOffset + resolutionScale*sin(resolution);
 
     if (debug && !doGSF) cout << "raw + PS " << rawE.EvalInstance() << endl;
     if (debug && doGSF) cout << "raw Comb " << rawComb.EvalInstance() << endl;
@@ -424,5 +393,3 @@ int main(int argc, char** argv) {
     
     
 }
-  
-

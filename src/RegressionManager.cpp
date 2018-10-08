@@ -170,6 +170,7 @@ bool RegressionManager::makeRegression()
                     m_reader.outputDirectory(),
                     it->doCombine,
 		    it->doEB,
+		    it->doPerfectResponse,
 		    it->scaleMin,
 		    it->scaleMax
                     );
