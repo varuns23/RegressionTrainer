@@ -1,0 +1,110 @@
+@(#)CERN job starter $Date: 2010/06/23 14:22:16 $
+Working directory is </pool/lsf/varuns/180381221> on <lxbrf49c05.cern.ch>
+
+START OF RUN FOR electron_EB_ecal_lowpt.config
+INFO: Creating new GBRLikelihoodTrain regression
+INFO: init semi-parametric GBR regression electron_EB_ecal_lowpt
+INFO: Prepare and run training for electron_EB_ecal_lowpt
+      Running only EB
+INFO: EventWeight = 1
+INFO: Cuts for EB training = '(( genEnergy > 0 && full5x5_sigmaIetaIeta[0] > 0 && full5x5_sigmaIphiIphi[0] > 0 ))&&(isEB)'
+INFO: MinEvents = 250
+INFO: Shrinkage = 0.1
+INFO: NTrees = 2500
+INFO: MinSignificance = 5
+INFO: train BDT for EB central value estimation
+RooCFunction1Binding<double,double>::nllfunc[ function=(0x2b94130b4340) x=fullparmsum ] = -9.47254e+06
+Minuit2Minimizer: Minimize with max-calls 2000 convergence for edm < 1 strategy 0
+MnSeedGenerator: for initial parameters FCN = -9472544.884557
+[#0] WARNING:Minization -- RooMinimizerFcn: Minimized function has error status.
+Returning maximum FCN so far (4.30286e+07) to force MIGRAD to back out of this region. Error log follows
+Parameter values: sigmeantvarEB=-0.411517, sign2varEB=-0.53089, signvarEB=-1.53089, sigwidthtvarEB=-1.28982
+
+[#0] WARNING:Minization -- RooMinimizerFcn: Minimized function has error status.
+Returning maximum FCN so far (4.30286e+07) to force MIGRAD to back out of this region. Error log follows
+Parameter values: sigmeantvarEB=-0.411517, sign2varEB=-2.53089, signvarEB=-1.53089, sigwidthtvarEB=-1.28982
+
+MnSeedGenerator: Initial state:   - FCN =  -9472544.884557 Edm =       793042 NCalls =     17
+VariableMetric: start iterating until Edm is < 0.001
+VariableMetric: Initial state   - FCN =  -9472544.884557 Edm =       793042 NCalls =     17
+VariableMetric: Iteration #   0 - FCN =  -9472544.884557 Edm =       793042 NCalls =     17
+VariableMetric: Iteration #   1 - FCN =    -9738251.4914 Edm =   4.7738e+07 NCalls =     36
+VariableMetric: Iteration #   2 - FCN =  -9810995.579992 Edm =       481594 NCalls =     50
+VariableMetric: Iteration #   3 - FCN =  -9980836.047911 Edm =       209991 NCalls =     59
+VariableMetric: Iteration #   4 - FCN =  -10005556.76411 Edm =      40012.6 NCalls =     71
+VariableMetric: Iteration #   5 - FCN =  -10050596.69764 Edm =      7597.01 NCalls =     81
+VariableMetric: Iteration #   6 - FCN =  -10085456.59384 Edm =      6401.67 NCalls =     92
+VariableMetric: Iteration #   7 - FCN =  -10091990.65272 Edm =      319.172 NCalls =    102
+VariableMetric: Iteration #   8 - FCN =  -10093185.43551 Edm =      218.624 NCalls =    114
+VariableMetric: Iteration #   9 - FCN =  -10093428.51482 Edm =      4.79224 NCalls =    124
+VariableMetric: Iteration #  10 - FCN =  -10093434.13848 Edm =     0.220216 NCalls =    134
+VariableMetric: Iteration #  11 - FCN =  -10093434.38313 Edm =   0.00120539 NCalls =    144
+VariableMetric: Iteration #  12 - FCN =  -10093434.38421 Edm =  9.39272e-06 NCalls =    155
+Minuit2Minimizer : Valid minimum - status = 0
+FVAL  = -10093434.3842123859
+Edm   = 9.39271836273431424e-06
+Nfcn  = 155
+sigmeantvarEB	  = -0.407255	 +/-  1.75793e-05
+sign2varEB	  = -1.5443	 +/-  1.23094e-05
+signvarEB	  = -1.51817	 +/-  0.00014644
+sigwidthtvarEB	  = -1.27772	 +/-  9.64534e-05
+  1) RooRealVar::  sigmeantvarEB = -0.407255 +/- 1.75793e-05
+  2) RooRealVar:: sigwidthtvarEB = -1.27772 +/- 9.64534e-05
+  3) RooRealVar::      signvarEB = -1.51817 +/- 0.00014644
+  4) RooRealVar::     sign2varEB = -1.5443 +/- 1.23094e-05
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooDoubleCBFast::sigpdfEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::targetvar
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealConstraint::sigmeanlimEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooGBRTargetFlex::sigmeantEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooGBRFunctionFlex::sigmeantfuncEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::sigmeantvarEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_0
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_1
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_2
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_3
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_4
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_5
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_6
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_7
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_8
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_9
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_10
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_11
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_12
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_13
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_14
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_15
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_16
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_17
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_18
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_19
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_20
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_21
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_22
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_23
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_24
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::var_25
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealConstraint::sigwidthlimEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooGBRTargetFlex::sigwidthtEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooGBRFunctionFlex::sigwidthtfuncEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::sigwidthtvarEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooConstVar::2
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealConstraint::signlimEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooGBRTargetFlex::signtEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooGBRFunctionFlex::signfuncEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::signvarEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooConstVar::1
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealConstraint::sign2limEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooGBRTargetFlex::sign2tEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooGBRFunctionFlex::sign2funcEB
+[#1] INFO:ObjectHandling -- RooWorkspace::import(wereg_eb) importing RooRealVar::sign2varEB
+INFO: RegressionManager::makeRegression(): Elapsed time = 11224 s
+                                                        = 3 h 7 min
+- Finish - All good -
+END OF RUN FOR electron_EB_ecal_lowpt.config
+
+Job finished at Fri Jul 13 21:36:58 CEST 2018 on node 
+ under linux version Scientific Linux CERN SLC release 6.9 (Carbon)
+
+CERN statistics: This process used approximately : 36:29:06 KSI2K hours (131346 KSI2K seconds)
+                 This process corresponds to     : 142:17:31 HS06  hours (512251 HS06  seconds)
